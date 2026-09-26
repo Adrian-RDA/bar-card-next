@@ -1,11 +1,11 @@
 {
-  "name": "bar-card",
+  "name": "bar-card-next",
   "version": "4.0.0",
   "private": true,
   "type": "module",
   "description": "Configurable bar card for Home Assistant",
   "license": "MIT",
-  "repository": "https://github.com/Adrian-RDA/bar-card",
+  "repository": "https://github.com/Adrian-RDA/bar-card-next",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",

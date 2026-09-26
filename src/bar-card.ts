@@ -1,21 +1,30 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { keyed } from 'lit/directives/keyed.js';
 import type { TemplateResult } from 'lit';
 import type { BarCardConfig, HomeAssistant, ResolvedBar } from './types';
-import { displayValue, matchingSeverity, numericValue, percent, resolveBars, validateConfig } from './config';
+import {
+  displayValue,
+  matchingSeverity,
+  numericValue,
+  percent,
+  resolveBars,
+  validateConfig,
+  valueChange,
+} from './config';
 import { cardStyles } from './styles';
 import { translate } from './i18n';
 import './editor';
 
 const VERSION = '4.0.0';
 
-@customElement('bar-card')
+@customElement('bar-card-next')
 export class BarCard extends LitElement {
   static styles = cardStyles;
 
   static getConfigElement(): HTMLElement {
-    return document.createElement('bar-card-editor');
+    return document.createElement('bar-card-next-editor');
   }
 
   static getStubConfig(): BarCardConfig {
@@ -24,7 +33,8 @@ export class BarCard extends LitElement {
 
   @property({ attribute: false }) hass?: HomeAssistant;
   @state() private config?: BarCardConfig;
-  private previous = new Map<string, number>();
+  private previous = new Map<number, number>();
+  private changeVersion = new Map<number, number>();
   private holdTimer?: number;
   private tapTimer?: number;
   private held = false;
@@ -33,6 +43,7 @@ export class BarCard extends LitElement {
   setConfig(config: BarCardConfig): void {
     validateConfig(config);
     this.previous.clear();
+    this.changeVersion.clear();
     this.config = structuredClone(config);
   }
 
@@ -59,16 +70,16 @@ export class BarCard extends LitElement {
       this.config.stack === 'horizontal' ? bars.length : Math.max(1, Number(this.config.columns ?? 1));
     const row = this.config.entity_row;
     return html`
-      <ha-card class=${row ? 'entity-row' : ''}>
+      <ha-card class=${`${row ? 'entity-row' : ''} ${this.config.shape === 'square' ? 'square' : ''}`}>
         ${this.config.title && !row ? html`<div class="card-title">${this.config.title}</div>` : nothing}
         <div id="states" class="bars" style=${styleMap({ '--columns': String(columns) })}>
-          ${bars.map((bar) => this.renderBar(bar))}
+          ${bars.map((bar, index) => this.renderBar(bar, index))}
         </div>
       </ha-card>
     `;
   }
 
-  private renderBar(bar: ResolvedBar): TemplateResult | typeof nothing {
+  private renderBar(bar: ResolvedBar, index: number): TemplateResult | typeof nothing {
     const state = this.hass?.states[bar.entity];
     if (!state)
       return html`<div class="bar-error" role="status">
@@ -94,14 +105,14 @@ export class BarCard extends LitElement {
     const name = bar.name || state.attributes.friendly_name || bar.entity;
     const unit = bar.unit_of_measurement ?? state.attributes.unit_of_measurement ?? '';
     const value = displayValue(bounded ?? raw, bar, String(unit));
-    const previous = this.previous.get(bar.entity);
-    const indicator =
-      number === undefined || previous === undefined || number === previous
-        ? ''
-        : number > previous
-          ? '▲'
-          : '▼';
-    if (number !== undefined) this.previous.set(bar.entity, number);
+    const change = valueChange(this.previous.get(index), number);
+    const indicator = change === 'increase' ? '▲' : change === 'decrease' ? '▼' : '';
+    if (number !== undefined) this.previous.set(index, number);
+    if (change) this.changeVersion.set(index, (this.changeVersion.get(index) ?? 0) + 1);
+    const animate = bar.animation.state !== 'off';
+    const mode = bar.animation.mode ?? 'change';
+    const animateChange = animate && (mode === 'change' || mode === 'both');
+    const animatePulse = animate && (mode === 'pulse' || mode === 'both');
     const vertical = ['up', 'down', 'up-reverse', 'down-reverse'].includes(bar.direction);
     const reverse = ['left', 'down', 'right-reverse', 'up-reverse'].includes(bar.direction);
     const minmax = html`<span class="minmax">${bar.min} / ${bar.max}${unit ? ` ${unit}` : ''}</span>`;
@@ -119,11 +130,16 @@ export class BarCard extends LitElement {
       '--bar-target': `${target ?? 0}%`,
       '--bar-height': typeof bar.height === 'number' ? `${bar.height}px` : bar.height || '40px',
       '--bar-width': bar.width || '100%',
+      '--bar-radius':
+        bar.shape === 'square'
+          ? '0px'
+          : 'var(--bar-card-border-radius, var(--ha-progress-bar-border-radius, var(--ha-card-border-radius, 12px)))',
       '--animation-speed': `${Math.max(0.2, Number(bar.animation.speed) || 5)}s`,
+      '--change-duration': `${Math.max(0.1, Math.min(5, Number(bar.animation.duration) || 0.7))}s`,
     });
     return html`
       <bar-card-card
-        class=${`${vertical ? 'vertical' : 'horizontal'} ${reverse ? 'reverse' : ''}`}
+        class=${`${vertical ? 'vertical' : 'horizontal'} ${reverse ? 'reverse' : ''} ${animateChange ? 'motion-change' : ''}`}
         style=${style}
         role="button"
         tabindex="0"
@@ -149,7 +165,8 @@ export class BarCard extends LitElement {
           aria-valuetext=${value}
         >
           <bar-card-backgroundbar></bar-card-backgroundbar>
-          <bar-card-currentbar class=${bar.animation.state === 'on' ? 'animated' : ''}></bar-card-currentbar>
+          <bar-card-currentbar class=${animatePulse ? 'animated' : ''}></bar-card-currentbar>
+          ${change && animateChange ? keyed(`${index}-${this.changeVersion.get(index)}`, html`<bar-card-change></bar-card-change>`) : nothing}
           ${target === undefined ? nothing : html`<bar-card-markerbar></bar-card-markerbar>`}
           <bar-card-contentbar>
             ${bar.positions.icon === 'inside' ? iconTemplate : nothing}
@@ -235,13 +252,13 @@ declare global {
   }
 }
 window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === 'bar-card')) {
+if (!window.customCards.some((card) => card.type === 'bar-card-next')) {
   window.customCards.push({
-    type: 'bar-card',
-    name: 'Bar Card',
+    type: 'bar-card-next',
+    name: 'Bar Card Next',
     description: 'Modern, configurable bars for entity values',
     preview: true,
-    documentationURL: 'https://github.com/Adrian-RDA/bar-card',
+    documentationURL: 'https://github.com/Adrian-RDA/bar-card-next',
   });
 }
 console.info(`BAR-CARD ${VERSION}`);

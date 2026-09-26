@@ -3,10 +3,20 @@ import { css } from 'lit';
 export const cardStyles = css`
   :host {
     display: block;
-    --bar-radius: var(--bar-card-border-radius, 12px);
+    --bar-radius: var(
+      --bar-card-border-radius,
+      var(--ha-progress-bar-border-radius, var(--ha-card-border-radius, 12px))
+    );
   }
   ha-card {
+    display: block;
+    background: var(--ha-card-background, var(--card-background-color, var(--ha-color-surface-default, #fff)));
+    border-radius: var(--ha-card-border-radius, 12px);
+    box-shadow: var(--ha-card-box-shadow, var(--ha-box-shadow-s, 0 2px 8px #0002));
     overflow: hidden;
+  }
+  ha-card.square {
+    border-radius: 0;
   }
   ha-card.entity-row {
     background: transparent;
@@ -101,22 +111,44 @@ export const cardStyles = css`
     min-height: var(--bar-height);
   }
   bar-card-backgroundbar,
-  bar-card-currentbar {
+  bar-card-currentbar,
+  bar-card-change {
     display: block;
     position: absolute;
     inset: 0;
     border-radius: inherit;
   }
   bar-card-backgroundbar {
-    background: var(--bar-color);
-    opacity: 0.16;
+    background: var(--ha-progress-bar-track-color, color-mix(in srgb, var(--bar-color) 16%, transparent));
   }
   bar-card-currentbar {
     background: var(--bar-color);
     width: var(--bar-progress);
+  }
+  .motion-change bar-card-currentbar {
     transition:
-      width 300ms ease,
-      height 300ms ease;
+      width var(--change-duration) ease,
+      height var(--change-duration) ease;
+  }
+  bar-card-change {
+    pointer-events: none;
+    z-index: 2;
+    background: linear-gradient(
+      100deg,
+      transparent 15%,
+      color-mix(in srgb, var(--bar-color) 25%, white) 50%,
+      transparent 85%
+    );
+    opacity: 0;
+    animation: bar-change var(--change-duration) ease-out 1;
+  }
+  @keyframes bar-change {
+    20% {
+      opacity: 0.55;
+    }
+    100% {
+      opacity: 0;
+    }
   }
   .horizontal.reverse bar-card-currentbar {
     left: auto;
@@ -194,9 +226,9 @@ export const cardStyles = css`
     margin: 0;
     padding: 3px 6px;
     border-radius: 6px;
-    color: #fff;
-    background: #172534b8;
-    text-shadow: 0 1px 2px #0008;
+    color: var(--primary-text-color);
+    background: var(--card-background-color, var(--ha-color-surface-default, #fff));
+    box-shadow: var(--ha-box-shadow-s, 0 1px 4px #0002);
   }
   .vertical .outside {
     justify-content: center;
@@ -210,6 +242,10 @@ export const cardStyles = css`
     bar-card-currentbar {
       transition: none;
       animation: none !important;
+    }
+    bar-card-change {
+      animation: none !important;
+      display: none;
     }
   }
 `;

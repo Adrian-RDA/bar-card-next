@@ -21,4 +21,4 @@ jobs:
       - name: Publish HACS asset
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/bar-card.js --title "${GITHUB_REF_NAME}" --generate-notes
+        run: gh release create "${GITHUB_REF_NAME}" dist/bar-card-next.js --title "${GITHUB_REF_NAME}" --generate-notes

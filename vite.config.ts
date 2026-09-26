@@ -5,7 +5,7 @@ export default defineConfig({
     lib: {
       entry: 'src/bar-card.ts',
       formats: ['es'],
-      fileName: () => 'bar-card.js',
+      fileName: () => 'bar-card-next.js',
     },
     outDir: 'dist',
     emptyOutDir: true,

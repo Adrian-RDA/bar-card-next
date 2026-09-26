@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { displayValue, matchingSeverity, numericValue, percent, resolveBars, validateConfig } from './config';
+import {
+  displayValue,
+  matchingSeverity,
+  numericValue,
+  percent,
+  resolveBars,
+  validateConfig,
+  valueChange,
+} from './config';
 import type { BarCardConfig, ResolvedBar } from './types';
 
 const state = {
@@ -30,6 +38,19 @@ describe('configuration compatibility', () => {
     expect(bars[1].max).toBe(200);
   });
 
+  it('inherits shape and animation while allowing per-bar overrides', () => {
+    const config: BarCardConfig = {
+      entities: ['sensor.battery', { entity: 'sensor.other', shape: 'theme', animation: { mode: 'pulse' } }],
+      shape: 'square',
+      animation: { duration: 1.2 },
+    };
+    const bars = resolveBars(config, { 'sensor.battery': state });
+    expect(bars[0].shape).toBe('square');
+    expect(bars[0].animation).toMatchObject({ state: 'on', mode: 'change', duration: 1.2 });
+    expect(bars[1].shape).toBe('theme');
+    expect(bars[1].animation).toMatchObject({ state: 'on', mode: 'pulse', duration: 1.2 });
+  });
+
   it('rejects missing entities and invalid columns', () => {
     expect(() => validateConfig({})).toThrow();
     expect(() => validateConfig({ entity: 'sensor.a', columns: 0 })).toThrow();
@@ -37,6 +58,13 @@ describe('configuration compatibility', () => {
 });
 
 describe('bar values', () => {
+  it('detects numeric changes without animating the initial state', () => {
+    expect(valueChange(undefined, 42)).toBeUndefined();
+    expect(valueChange(42, 42)).toBeUndefined();
+    expect(valueChange(42, 55)).toBe('increase');
+    expect(valueChange(55, 42)).toBe('decrease');
+    expect(valueChange(42, undefined)).toBeUndefined();
+  });
   it('handles unavailable values and invalid ranges without NaN', () => {
     expect(numericValue('unavailable')).toBeUndefined();
     expect(numericValue('12.5')).toBe(12.5);

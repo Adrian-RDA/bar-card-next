@@ -8,7 +8,7 @@ import type { BarCardConfig, BarOptions, HomeAssistant, SeverityRule } from './t
 type Tab = 'entities' | 'appearance' | 'values' | 'rules' | 'actions';
 type FieldType = 'text' | 'number' | 'checkbox' | 'select';
 
-@customElement('bar-card-editor')
+@customElement('bar-card-next-editor')
 export class BarCardEditor extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
   @state() private config?: BarCardConfig;
@@ -270,7 +270,7 @@ export class BarCardEditor extends LitElement {
       }
       <div class="fields">
         ${this.field('Name', 'name')}${this.field('Icon', 'icon', 'text', [], 'Example: mdi:lightning-bolt')}
-        ${this.colorField()}
+        ${this.colorField()} ${this.field('Shape', 'shape', 'select', ['theme', 'square'])}
         ${this.field('Direction', 'direction', 'select', ['right', 'left', 'up', 'down'])}
         ${this.field('Height', 'height', 'text', [], 'Example: 40px or 180px for vertical bars')}
         ${this.field('Width', 'width', 'text', [], 'Example: 100% or 240px')}
@@ -331,6 +331,8 @@ export class BarCardEditor extends LitElement {
 
   private renderValues(): TemplateResult {
     const animation = this.scope().animation ?? {};
+    const mode = animation.mode ?? this.config?.animation?.mode ?? 'change';
+    const enabled = (animation.state ?? this.config?.animation?.state ?? 'on') !== 'off';
     return html`<section class="panel">
       <h3>${this.t('Values')}</h3>
       <p>${this.t('Set the range, number format, and animation.')}</p>
@@ -348,7 +350,7 @@ export class BarCardEditor extends LitElement {
           ><span>${this.t('Animated bar')}</span
           ><input
             type="checkbox"
-            .checked=${animation.state === 'on'}
+            .checked=${enabled}
             @change=${(e: Event) =>
               this.edit((_config, scope) => {
                 scope.animation = {
@@ -358,17 +360,61 @@ export class BarCardEditor extends LitElement {
               })}
         /></label>
         <label class="field"
-          ><span>${this.t('Speed in seconds')}</span
-          ><input
-            type="number"
-            min="0.2"
-            step="0.1"
-            .value=${String(animation.speed ?? '')}
+          ><span>${this.t('Animation mode')}</span>
+          <select
+            .value=${String(animation.mode ?? '')}
             @change=${(e: Event) =>
               this.edit((_config, scope) => {
-                scope.animation = { ...scope.animation, speed: Number((e.target as HTMLInputElement).value) };
+                const value = (e.target as HTMLSelectElement).value;
+                scope.animation = {
+                  ...scope.animation,
+                  mode: (value || undefined) as 'change' | 'pulse' | 'both' | undefined,
+                };
               })}
-        /></label>
+          >
+            <option value="">
+              ${this.selected === -1 ? this.t('Default (change)') : this.t('Inherited')}
+            </option>
+            ${['change', 'pulse', 'both'].map((item) => html`<option value=${item}>${this.t(item)}</option>`)}
+          </select></label
+        >
+        ${
+          mode === 'change' || mode === 'both'
+            ? html`<label class="field"
+                ><span>${this.t('Change duration in seconds')}</span>
+                <input
+                  type="number"
+                  min="0.1"
+                  max="5"
+                  step="0.1"
+                  .value=${String(animation.duration ?? '')}
+                  placeholder="0.7"
+                  @change=${(e: Event) =>
+                    this.edit((_config, scope) => {
+                      const value = (e.target as HTMLInputElement).value;
+                      scope.animation = { ...scope.animation, duration: value ? Number(value) : undefined };
+                    })}
+              /></label>`
+            : nothing
+        }
+        ${
+          mode === 'pulse' || mode === 'both'
+            ? html`<label class="field"
+                ><span>${this.t('Pulse speed in seconds')}</span>
+                <input
+                  type="number"
+                  min="0.2"
+                  step="0.1"
+                  .value=${String(animation.speed ?? '')}
+                  placeholder="5"
+                  @change=${(e: Event) =>
+                    this.edit((_config, scope) => {
+                      const value = (e.target as HTMLInputElement).value;
+                      scope.animation = { ...scope.animation, speed: value ? Number(value) : undefined };
+                    })}
+              /></label>`
+            : nothing
+        }
       </div>
     </section>`;
   }
@@ -626,7 +672,7 @@ export class BarCardEditor extends LitElement {
     return html`<div class="editor">
       <header>
         <div>
-          <h2>Bar Card</h2>
+          <h2>Bar Card Next</h2>
           <p>${this.t('Build clear, useful bars for your dashboard.')}</p>
         </div>
         <span class="scope"
@@ -688,7 +734,7 @@ export class BarCardEditor extends LitElement {
     .editor {
       background: var(--card-background-color, #fff);
       border: 1px solid var(--divider-color, #ddd);
-      border-radius: 16px;
+      border-radius: var(--ha-card-border-radius, 12px);
       overflow: hidden;
     }
     header {

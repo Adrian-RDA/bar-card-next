@@ -9,11 +9,11 @@ export const DEFAULT_POSITIONS = {
 } as const;
 
 const DEFAULTS = {
-  color: 'var(--bar-card-color, var(--primary-color))',
+  color: 'var(--bar-card-color, var(--ha-progress-bar-indicator-color, var(--primary-color)))',
   min: 0,
   max: 100,
   direction: 'right',
-  animation: { state: 'off', speed: 5 },
+  animation: { state: 'on', speed: 5, duration: 0.7, mode: 'change' },
 };
 
 export function validateConfig(config: BarCardConfig): void {
@@ -96,6 +96,14 @@ export function numericValue(value: unknown): number | undefined {
 export function percent(value: number | undefined, min: number, max: number): number {
   if (value === undefined || !Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 0;
   return Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+}
+
+export function valueChange(
+  previous: number | undefined,
+  current: number | undefined,
+): 'increase' | 'decrease' | undefined {
+  if (previous === undefined || current === undefined || current === previous) return undefined;
+  return current > previous ? 'increase' : 'decrease';
 }
 
 export function matchingSeverity(

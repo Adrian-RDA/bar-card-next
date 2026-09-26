@@ -40,6 +40,8 @@ export interface BarPositions {
 export interface BarAnimation {
   state?: 'on' | 'off';
   speed?: number;
+  duration?: number;
+  mode?: 'change' | 'pulse' | 'both';
 }
 
 export interface BarOptions {
@@ -48,6 +50,7 @@ export interface BarOptions {
   name?: string;
   icon?: string;
   color?: string;
+  shape?: 'theme' | 'square';
   min?: number;
   max?: number;
   target?: number;

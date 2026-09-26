@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bar Card development preview</title>
+    <title>Bar Card Next development preview</title>
     <style>
       :root { font-family: Inter, Arial, sans-serif; color: #243244; background: #edf2f7; --primary-text-color: #243244; --secondary-text-color: #627084; --primary-color: #0d8ac7; --card-background-color: #fff; --secondary-background-color: #eef4f8; --divider-color: #d8e1e9; --ha-card-border-radius: 16px; }
       body { margin: 0; padding: 32px; }
@@ -20,9 +20,9 @@
   </head>
   <body>
     <main>
-      <div><h1>Bar Card preview</h1><p>Development fixture for layout, editor, and theme checks. <button id="theme">Toggle theme</button></p></div>
-      <div class="preview-grid"><bar-card id="horizontal"></bar-card><bar-card id="vertical"></bar-card></div>
-      <bar-card-editor id="editor"></bar-card-editor>
+      <div><h1>Bar Card Next preview</h1><p>Development fixture for layout, editor, and theme checks. <button id="theme">Toggle theme</button> <button id="value">Change value</button> <button id="shape">Square style</button></p></div>
+      <div class="preview-grid"><bar-card-next id="horizontal"></bar-card-next><bar-card-next id="vertical"></bar-card-next></div>
+      <bar-card-next-editor id="editor"></bar-card-next-editor>
     </main>
     <script type="module">
       import './src/bar-card.ts';
@@ -51,6 +51,15 @@
       editor.setConfig(config);
       editor.addEventListener('config-changed', (event) => horizontal.setConfig(event.detail.config));
       document.querySelector('#theme').addEventListener('click', () => document.body.classList.toggle('dark'));
+      document.querySelector('#value').addEventListener('click', () => {
+        const current = Number(hass.states['sensor.battery'].state);
+        hass.states['sensor.battery'] = { ...hass.states['sensor.battery'], state: String(current >= 90 ? 35 : current + 14) };
+        horizontal.hass = { ...hass, states: { ...hass.states } };
+      });
+      document.querySelector('#shape').addEventListener('click', () => {
+        config.shape = config.shape === 'square' ? 'theme' : 'square';
+        horizontal.setConfig(config);
+      });
     </script>
   </body>
 </html>
