@@ -4,7 +4,7 @@ A flexible bar card for Home Assistant dashboards. Bar Card Next uses Home Assis
 
 ## Install
 
-Add the separate **bar-card-next** repository as a custom **Dashboard** repository in HACS. After installing a release, add the `bar-card-next.js` resource if HACS has not registered it automatically:
+Add the separate **bar-card-next** repository as a custom **Dashboard** repository in HACS. After installation, add the `bar-card-next.js` resource if HACS has not registered it automatically:
 
 ```yaml
 url: /hacsfiles/bar-card-next/bar-card-next.js
@@ -123,7 +123,7 @@ The local preview at `http://localhost:5173/` contains sample cards and an edito
 pnpm check
 ```
 
-`pnpm build` creates `dist/bar-card-next.js`. Tags beginning with `v` run the release workflow, which checks the project and attaches this file to a GitHub release for HACS.
+`pnpm build` creates `dist/bar-card-next.js`. Commit this generated file whenever the source changes so HACS can install directly from the default branch. CI checks that the committed bundle matches the source. Tags beginning with `v` run the release workflow, which checks the project and attaches this file to a GitHub release for HACS.
 
 ## License
 
