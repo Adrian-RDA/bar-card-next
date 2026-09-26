@@ -5,6 +5,7 @@ import type { TemplateResult } from 'lit';
 import type { BarCardConfig, HomeAssistant, ResolvedBar } from './types';
 import { displayValue, matchingSeverity, numericValue, percent, resolveBars, validateConfig } from './config';
 import { cardStyles } from './styles';
+import { translate } from './i18n';
 import './editor';
 
 const VERSION = '4.0.0';
@@ -69,7 +70,11 @@ export class BarCard extends LitElement {
 
   private renderBar(bar: ResolvedBar): TemplateResult | typeof nothing {
     const state = this.hass?.states[bar.entity];
-    if (!state) return html`<div class="bar-error" role="status">Entity not available: ${bar.entity}</div>`;
+    if (!state)
+      return html`<div class="bar-error" role="status">
+        ${translate(this.hass?.locale?.language ?? this.hass?.language, 'Entity not available')}:
+        ${bar.entity}
+      </div>`;
     const raw = bar.attribute ? state.attributes[bar.attribute] : state.state;
     const number = numericValue(raw);
     const severity = matchingSeverity(raw, bar.severity);
@@ -102,7 +107,9 @@ export class BarCard extends LitElement {
     const minmax = html`<span class="minmax">${bar.min} / ${bar.max}${unit ? ` ${unit}` : ''}</span>`;
     const iconTemplate = icon ? html`<ha-icon .icon=${String(icon)} aria-hidden="true"></ha-icon>` : nothing;
     const indicatorTemplate = indicator
-      ? html`<span class="indicator" aria-label=${indicator === '▲' ? 'Increasing' : 'Decreasing'}
+      ? html`<span
+          class="indicator"
+          aria-label=${translate(this.hass?.locale?.language ?? this.hass?.language, indicator === '▲' ? 'Increasing' : 'Decreasing')}
           >${indicator}</span
         >`
       : nothing;
@@ -166,7 +173,10 @@ export class BarCard extends LitElement {
       new CustomEvent('hass-action', {
         bubbles: true,
         composed: true,
-        detail: { config: bar, action },
+        detail: {
+          config: action === 'tap' && !bar.tap_action ? { ...bar, tap_action: { action: 'more-info' } } : bar,
+          action,
+        },
       }),
     );
   }

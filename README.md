@@ -11,7 +11,7 @@ url: /hacsfiles/bar-card/bar-card.js
 type: module
 ```
 
-Then add a card through the dashboard editor and select **Bar Card**. The graphical editor supports entities, per-entity overrides, layout, value formatting, element positions, severity rules, animation, and tap/hold/double-tap actions.
+Then add a card through the dashboard editor and select **Bar Card**. The graphical editor supports entities, per-entity overrides, layout, value formatting, element positions, severity rules, animation, and tap/hold/double-tap actions. Labels follow the Home Assistant language setting in English and German.
 
 ## Quick start
 

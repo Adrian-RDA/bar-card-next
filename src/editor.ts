@@ -2,6 +2,7 @@ import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { TemplateResult } from 'lit';
 import { DEFAULT_POSITIONS } from './config';
+import { translate } from './i18n';
 import type { BarCardConfig, BarOptions, HomeAssistant, SeverityRule } from './types';
 
 type Tab = 'entities' | 'appearance' | 'values' | 'rules' | 'actions';
@@ -14,6 +15,10 @@ export class BarCardEditor extends LitElement {
   @state() private selected = -1;
   @state() private tab: Tab = 'entities';
   @state() private error = '';
+
+  private t(text: string): string {
+    return translate(this.hass?.locale?.language ?? this.hass?.language, text);
+  }
 
   setConfig(config: BarCardConfig): void {
     this.config = structuredClone(config);
@@ -103,9 +108,9 @@ export class BarCardEditor extends LitElement {
   ): TemplateResult {
     const value = this.scope()[key];
     const inherited = this.selected !== -1 && value === undefined;
-    const placeholder = inherited ? `Inherited: ${String(this.config?.[key] ?? 'default')}` : '';
+    const placeholder = inherited ? `${this.t('Inherited')}: ${String(this.config?.[key] ?? 'default')}` : '';
     return html`<label class="field">
-      <span>${label}</span>
+      <span>${this.t(label)}</span>
       ${
         type === 'checkbox'
           ? html`<input
@@ -118,8 +123,8 @@ export class BarCardEditor extends LitElement {
                 .value=${String(value ?? '')}
                 @change=${(e: Event) => this.change(key, (e.target as HTMLSelectElement).value)}
               >
-                ${inherited ? html`<option value="">Inherited</option>` : nothing}
-                ${options.map((option) => html`<option value=${option}>${option}</option>`)}
+                ${inherited ? html`<option value="">${this.t('Inherited')}</option>` : nothing}
+                ${options.map((option) => html`<option value=${option}>${this.t(option)}</option>`)}
               </select>`
             : html`<input
                 type=${type}
@@ -131,7 +136,7 @@ export class BarCardEditor extends LitElement {
                 }}
               />`
       }
-      ${hint ? html`<small>${hint}</small>` : nothing}
+      ${hint ? html`<small>${this.t(hint)}</small>` : nothing}
     </label>`;
   }
 
@@ -143,7 +148,7 @@ export class BarCardEditor extends LitElement {
   ): TemplateResult {
     const value = this.config?.[key];
     return html`<label class="field"
-      ><span>${label}</span>
+      ><span>${this.t(label)}</span>
       ${
         type === 'select'
           ? html`<select
@@ -153,7 +158,7 @@ export class BarCardEditor extends LitElement {
                   (config as Record<string, unknown>)[key] = (e.target as HTMLSelectElement).value;
                 })}
             >
-              ${options.map((item) => html`<option value=${item}>${item || 'Automatic'}</option>`)}
+              ${options.map((item) => html`<option value=${item}>${item ? this.t(item) : this.t('Automatic')}</option>`)}
             </select>`
           : html`<input
               type=${type}
@@ -174,10 +179,10 @@ export class BarCardEditor extends LitElement {
     return html`<section class="panel">
       <div class="section-head">
         <div>
-          <h3>Entities</h3>
-          <p>Add, arrange, and customize each bar.</p>
+          <h3>${this.t('Entities')}</h3>
+          <p>${this.t('Add, arrange, and customize each bar.')}</p>
         </div>
-        <button class="primary" type="button" @click=${this.addEntity}>+ Add entity</button>
+        <button class="primary" type="button" @click=${this.addEntity}>+ ${this.t('Add entity')}</button>
       </div>
       <div class="entity-list">
         ${entries.map((entry, index) => {
@@ -192,14 +197,14 @@ export class BarCardEditor extends LitElement {
               }}
             >
               <span class="entity-name"
-                >${this.hass?.states[entity]?.attributes.friendly_name || entity || 'Choose an entity'}</span
+                >${this.hass?.states[entity]?.attributes.friendly_name || entity || this.t('Choose an entity')}</span
               >
               <small>${entity}</small>
             </button>
             <div class="row-actions">
               <button
                 type="button"
-                aria-label="Move up"
+                aria-label=${this.t('Move up')}
                 ?disabled=${index === 0}
                 @click=${() => this.moveEntity(index, -1)}
               >
@@ -207,7 +212,7 @@ export class BarCardEditor extends LitElement {
               </button>
               <button
                 type="button"
-                aria-label="Move down"
+                aria-label=${this.t('Move down')}
                 ?disabled=${index === entries.length - 1}
                 @click=${() => this.moveEntity(index, 1)}
               >
@@ -215,7 +220,7 @@ export class BarCardEditor extends LitElement {
               </button>
               <button
                 type="button"
-                aria-label="Remove"
+                aria-label=${this.t('Remove')}
                 ?disabled=${entries.length === 1}
                 @click=${() => this.removeEntity(index)}
               >
@@ -237,7 +242,7 @@ export class BarCardEditor extends LitElement {
   private entityPicker(): TemplateResult {
     const entity = this.scope().entity ?? '';
     return html`<label class="field"
-      ><span>Selected entity</span>
+      ><span>${this.t('Selected entity')}</span>
       <input
         list="bar-entities"
         .value=${entity}
@@ -247,14 +252,14 @@ export class BarCardEditor extends LitElement {
       <datalist id="bar-entities">
         ${Object.keys(this.hass?.states ?? {}).map((id) => html`<option value=${id}></option>`)}
       </datalist>
-      <small>Start typing an entity ID and choose from the suggestions.</small>
+      <small>${this.t('Start typing an entity ID and choose from the suggestions.')}</small>
     </label>`;
   }
 
   private renderAppearance(): TemplateResult {
     return html`<section class="panel">
-      <h3>Appearance</h3>
-      <p>Layout, color, and visible labels.</p>
+      <h3>${this.t('Appearance')}</h3>
+      <p>${this.t('Layout, color, and visible labels.')}</p>
       ${
         this.selected === -1
           ? html`<div class="fields">
@@ -272,7 +277,7 @@ export class BarCardEditor extends LitElement {
         ${this.field('Entity row', 'entity_row', 'checkbox')}
         ${this.field('Use entity attributes as options', 'entity_config', 'checkbox')}
       </div>
-      <h4>Element positions</h4>
+      <h4>${this.t('Element positions')}</h4>
       <div class="fields">
         ${Object.keys(DEFAULT_POSITIONS).map((key) => this.positionField(key as keyof typeof DEFAULT_POSITIONS))}
       </div>
@@ -282,7 +287,7 @@ export class BarCardEditor extends LitElement {
   private positionField(key: keyof typeof DEFAULT_POSITIONS): TemplateResult {
     const current = this.scope().positions?.[key];
     return html`<label class="field"
-      ><span>${key[0].toUpperCase() + key.slice(1)}</span>
+      ><span>${this.t(key[0].toUpperCase() + key.slice(1))}</span>
       <select
         .value=${String(current ?? '')}
         @change=${(e: Event) =>
@@ -295,9 +300,9 @@ export class BarCardEditor extends LitElement {
           })}
       >
         <option value="">
-          ${this.selected !== -1 ? 'Inherited' : `Default (${DEFAULT_POSITIONS[key]})`}
+          ${this.selected !== -1 ? this.t('Inherited') : `${this.t('Default')} (${this.t(DEFAULT_POSITIONS[key])})`}
         </option>
-        ${['inside', 'outside', 'off'].map((option) => html`<option value=${option}>${option}</option>`)}
+        ${['inside', 'outside', 'off'].map((option) => html`<option value=${option}>${this.t(option)}</option>`)}
       </select></label
     >`;
   }
@@ -306,29 +311,29 @@ export class BarCardEditor extends LitElement {
     const color = this.scope().color ?? '';
     const pickerColor = /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#0d8ac7';
     return html`<label class="field"
-      ><span>Color</span
+      ><span>${this.t('Color')}</span
       ><span class="color-control">
         <input
           type="color"
           .value=${pickerColor}
-          aria-label="Choose color"
+          aria-label=${this.t('Choose color')}
           @change=${(e: Event) => this.change('color', (e.target as HTMLInputElement).value)}
         />
         <input
           type="text"
           .value=${color}
-          placeholder="Theme color or CSS value"
+          placeholder=${this.t('Theme color or CSS value')}
           @change=${(e: Event) => this.change('color', (e.target as HTMLInputElement).value)}
         /> </span
-      ><small>Choose a color or enter a theme variable.</small></label
+      ><small>${this.t('Choose a color or enter a theme variable.')}</small></label
     >`;
   }
 
   private renderValues(): TemplateResult {
     const animation = this.scope().animation ?? {};
     return html`<section class="panel">
-      <h3>Values</h3>
-      <p>Set the range, number format, and animation.</p>
+      <h3>${this.t('Values')}</h3>
+      <p>${this.t('Set the range, number format, and animation.')}</p>
       <div class="fields">
         ${this.field('Attribute', 'attribute', 'text', [], 'Leave blank for entity state')}
         ${this.field('Minimum', 'min', 'number')}${this.field('Maximum', 'max', 'number')}
@@ -337,10 +342,10 @@ export class BarCardEditor extends LitElement {
         ${this.field('Limit displayed value to range', 'limit_value', 'checkbox')}
         ${this.field('Show complementary value', 'complementary', 'checkbox')}
       </div>
-      <h4>Animation</h4>
+      <h4>${this.t('Animation')}</h4>
       <div class="fields">
         <label class="field"
-          ><span>Animated bar</span
+          ><span>${this.t('Animated bar')}</span
           ><input
             type="checkbox"
             .checked=${animation.state === 'on'}
@@ -353,7 +358,7 @@ export class BarCardEditor extends LitElement {
               })}
         /></label>
         <label class="field"
-          ><span>Speed in seconds</span
+          ><span>${this.t('Speed in seconds')}</span
           ><input
             type="number"
             min="0.2"
@@ -373,8 +378,8 @@ export class BarCardEditor extends LitElement {
     return html`<section class="panel">
       <div class="section-head">
         <div>
-          <h3>Severity rules</h3>
-          <p>Choose a color or icon for ranges and text states.</p>
+          <h3>${this.t('Severity rules')}</h3>
+          <p>${this.t('Choose a color or icon for ranges and text states.')}</p>
         </div>
         <button
           type="button"
@@ -384,7 +389,7 @@ export class BarCardEditor extends LitElement {
               scope.severity = [...(scope.severity ?? []), { from: 0, to: 100, color: '#4caf50' }];
             })}
         >
-          + Add rule
+          + ${this.t('Add rule')}
         </button>
       </div>
       ${
@@ -393,10 +398,10 @@ export class BarCardEditor extends LitElement {
               (rule, index) =>
                 html`<div class="rule">
                   <div class="rule-head">
-                    <strong>Rule ${index + 1}</strong>
+                    <strong>${this.t('Rule')} ${index + 1}</strong>
                     <button
                       type="button"
-                      aria-label="Remove rule"
+                      aria-label=${this.t('Remove rule')}
                       @click=${() =>
                         this.edit((_config, scope) => {
                           scope.severity = scope.severity?.filter((_item, i) => i !== index);
@@ -412,7 +417,9 @@ export class BarCardEditor extends LitElement {
                   </div>
                 </div>`,
             )
-          : html`<p class="empty">No rules yet. Add one to change the bar based on its value.</p>`
+          : html`<p class="empty">
+              ${this.t('No rules yet. Add one to change the bar based on its value.')}
+            </p>`
       }
     </section>`;
   }
@@ -425,7 +432,7 @@ export class BarCardEditor extends LitElement {
     type: FieldType = 'text',
   ): TemplateResult {
     return html`<label class="field"
-      ><span>${label}</span>
+      ><span>${this.t(label)}</span>
       <input
         type=${type}
         .checked=${type === 'checkbox' ? Boolean(rule[key]) : false}
@@ -448,8 +455,8 @@ export class BarCardEditor extends LitElement {
 
   private renderActions(): TemplateResult {
     return html`<section class="panel">
-      <h3>Actions</h3>
-      <p>What happens when someone taps, holds, or double taps a bar.</p>
+      <h3>${this.t('Actions')}</h3>
+      <p>${this.t('What happens when someone taps, holds, or double taps a bar.')}</p>
       ${this.actionEditor('tap_action', 'Tap')}${this.actionEditor('hold_action', 'Hold')}${this.actionEditor('double_tap_action', 'Double tap')}
     </section>`;
   }
@@ -462,7 +469,7 @@ export class BarCardEditor extends LitElement {
     const kind = action?.action ?? '';
     const actionField = (name: string, property: string, type = 'text') =>
       html`<label class="field"
-        ><span>${name}</span>
+        ><span>${this.t(name)}</span>
         <input
           type=${type}
           .value=${String(action?.[property] ?? '')}
@@ -479,10 +486,10 @@ export class BarCardEditor extends LitElement {
     const legacyData = action?.service_data as Record<string, unknown> | undefined;
     const targetEntity = String(target?.entity_id ?? legacyData?.entity_id ?? '');
     return html`<div class="action-block">
-      <h4>${label}</h4>
+      <h4>${this.t(label)}</h4>
       <div class="fields">
         <label class="field"
-          ><span>Action</span
+          ><span>${this.t('Action')}</span
           ><select
             .value=${kind}
             @change=${(e: Event) =>
@@ -492,7 +499,7 @@ export class BarCardEditor extends LitElement {
                 else delete scope[key];
               })}
           >
-            ${['', 'more-info', 'toggle', 'navigate', 'url', 'perform-action', 'call-service', 'assist', 'none'].map((item) => html`<option value=${item}>${item || 'Default / inherit'}</option>`)}
+            ${['', 'more-info', 'toggle', 'navigate', 'url', 'perform-action', 'call-service', 'assist', 'none'].map((item) => html`<option value=${item}>${item || this.t('Default / inherit')}</option>`)}
           </select></label
         >
         ${kind === 'navigate' ? actionField('Navigation path', 'navigation_path') : nothing}
@@ -501,7 +508,7 @@ export class BarCardEditor extends LitElement {
           kind === 'perform-action' || kind === 'call-service'
             ? html` ${actionField('Service / action', kind === 'perform-action' ? 'perform_action' : 'service')}
                 <label class="field"
-                  ><span>Target entity ID</span
+                  ><span>${this.t('Target entity ID')}</span
                   ><input
                     type="text"
                     .value=${targetEntity}
@@ -528,7 +535,7 @@ export class BarCardEditor extends LitElement {
         ${
           kind === 'navigate'
             ? html`<label class="field"
-                ><span>Replace browser history</span
+                ><span>${this.t('Replace browser history')}</span
                 ><input
                   type="checkbox"
                   .checked=${Boolean(action?.navigation_replace)}
@@ -545,7 +552,7 @@ export class BarCardEditor extends LitElement {
         ${
           kind === 'assist'
             ? html`<label class="field"
-                ><span>Start listening</span
+                ><span>${this.t('Start listening')}</span
                 ><input
                   type="checkbox"
                   .checked=${Boolean(action?.start_listening)}
@@ -563,7 +570,7 @@ export class BarCardEditor extends LitElement {
         ${
           kind
             ? html`<label class="field"
-                ><span>Ask for confirmation</span
+                ><span>${this.t('Ask for confirmation')}</span
                 ><input
                   type="checkbox"
                   .checked=${Boolean(action?.confirmation)}
@@ -581,7 +588,7 @@ export class BarCardEditor extends LitElement {
       ${
         kind === 'perform-action' || kind === 'call-service'
           ? html`<label class="field full"
-              ><span>Action data (JSON object)</span>
+              ><span>${this.t('Action data (JSON object)')}</span>
               <textarea
                 rows="3"
                 .value=${JSON.stringify(action?.data ?? action?.service_data ?? {}, null, 2)}
@@ -597,7 +604,7 @@ export class BarCardEditor extends LitElement {
                       };
                     });
                   } catch {
-                    this.error = 'Action data must be a valid JSON object.';
+                    this.error = this.t('Action data must be a valid JSON object.');
                   }
                 }}
               ></textarea>
@@ -620,11 +627,11 @@ export class BarCardEditor extends LitElement {
       <header>
         <div>
           <h2>Bar Card</h2>
-          <p>Build clear, useful bars for your dashboard.</p>
+          <p>${this.t('Build clear, useful bars for your dashboard.')}</p>
         </div>
         <span class="scope"
-          >Editing:
-          ${this.selected === -1 ? 'All bars' : this.scope().entity || `Bar ${this.selected + 1}`}</span
+          >${this.t('Editing:')}
+          ${this.selected === -1 ? this.t('All bars') : this.scope().entity || `Bar ${this.selected + 1}`}</span
         >
       </header>
       <div class="scope-switch">
@@ -635,7 +642,7 @@ export class BarCardEditor extends LitElement {
             this.selected = -1;
           }}
         >
-          All bars
+          ${this.t('All bars')}
         </button>
         ${this.entries().map(
           (entry, index) =>
@@ -650,7 +657,7 @@ export class BarCardEditor extends LitElement {
             </button>`,
         )}
       </div>
-      <nav aria-label="Editor sections">
+      <nav aria-label=${this.t('Editor sections')}>
         ${tabs.map(
           ([tab, label]) =>
             html`<button
@@ -660,7 +667,7 @@ export class BarCardEditor extends LitElement {
                 this.tab = tab;
               }}
             >
-              ${label}
+              ${this.t(label)}
             </button>`,
         )}
       </nav>
