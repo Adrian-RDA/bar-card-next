@@ -1,571 +1,237 @@
-import { LitElement, html, customElement, property, TemplateResult, PropertyValues } from 'lit-element';
-import {
-  HomeAssistant,
-  hasAction,
-  handleAction,
-  LovelaceCardEditor,
-  domainIcon,
-  computeDomain,
-} from 'custom-card-helpers';
-
+import { LitElement, html, nothing } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import type { TemplateResult } from 'lit';
+import type { BarCardConfig, HomeAssistant, ResolvedBar } from './types';
+import { displayValue, matchingSeverity, numericValue, percent, resolveBars, validateConfig } from './config';
+import { cardStyles } from './styles';
 import './editor';
 
-import { BarCardConfig } from './types';
-import { actionHandler } from './action-handler-directive';
-import { CARD_VERSION } from './const';
-import { localize } from './localize/localize';
-import { mergeDeep, hasConfigOrEntitiesChanged, createConfigArray } from './helpers';
-import { styles } from './styles';
+const VERSION = '4.0.0';
 
-/* eslint no-console: 0 */
-console.info(
-  `%c  BAR-CARD \n%c  ${localize('common.version')} ${CARD_VERSION}    `,
-  'color: orange; font-weight: bold; background: black',
-  'color: white; font-weight: bold; background: dimgray',
-);
-
-// TODO Name your custom element
 @customElement('bar-card')
 export class BarCard extends LitElement {
-  public static async getConfigElement(): Promise<LovelaceCardEditor> {
-    return document.createElement('bar-card-editor') as LovelaceCardEditor;
+  static styles = cardStyles;
+
+  static getConfigElement(): HTMLElement {
+    return document.createElement('bar-card-editor');
   }
 
-  public static getStubConfig(): object {
-    return {};
+  static getStubConfig(): BarCardConfig {
+    return { entity: 'sun.sun' };
   }
 
-  @property() public hass?: HomeAssistant;
-  @property() private _config!: BarCardConfig;
-  @property() private _configArray: BarCardConfig[] = [];
-  private _stateArray: any[] = [];
-  private _animationState: any[] = [];
-  private _rowAmount = 1;
+  @property({ attribute: false }) hass?: HomeAssistant;
+  @state() private config?: BarCardConfig;
+  private previous = new Map<string, number>();
+  private holdTimer?: number;
+  private tapTimer?: number;
+  private held = false;
+  private activePointer?: number;
 
-  protected shouldUpdate(changedProps: PropertyValues): boolean {
-    return hasConfigOrEntitiesChanged(this, changedProps, false);
-  }
-
-  public setConfig(config: BarCardConfig): void {
-    if (!config) {
-      throw new Error(localize('common.invalid_configuration'));
-    }
-
-    this._config = mergeDeep(
-      {
-        animation: {
-          state: 'off',
-          speed: 5,
-        },
-        color: 'var(--bar-card-color, var(--primary-color))',
-        columns: 1,
-        direction: 'right',
-        max: 100,
-        min: 0,
-        positions: {
-          icon: 'outside',
-          indicator: 'outside',
-          name: 'inside',
-          minmax: 'off',
-          value: 'inside',
-        },
-      },
-      config,
-    );
-
-    if (this._config.stack == 'horizontal') this._config.columns = this._config.entities.length;
-    this._configArray = createConfigArray(this._config);
-    this._rowAmount = this._configArray.length / this._config.columns;
-  }
-
-  protected render(): TemplateResult | void {
-    if (!this._config || !this.hass) {
-      return html``;
-    }
-
-    return html`
-      <ha-card
-        .header=${this._config.title ? this._config.title : null}
-        style="${this._config.entity_row ? 'background: #0000; box-shadow: none;' : ''}"
-      >
-        <div
-          id="states"
-          class="card-content"
-          style="${this._config.entity_row ? 'padding: 0px;' : ''} ${this._config.direction == 'up'
-            ? ''
-            : 'flex-grow: 0;'}"
-        >
-          ${this._createBarArray()}
-        </div>
-      </ha-card>
-      ${styles}
-    `;
-  }
-
-  private _createBarArray(): TemplateResult[] {
-    // Create array containing number of bars per row.
-    const columnsArray: number[] = [];
-    for (let i = 0; i < this._configArray.length; i++) {
-      if ((columnsArray.length + 1) * this._config.columns == i) {
-        columnsArray.push(this._config.columns);
-      }
-      if (this._configArray.length == i + 1) {
-        columnsArray.push(this._configArray.length - columnsArray.length * this._config.columns);
-      }
-    }
-
-    // For each row add contained bars based on columnsArray.
-    const perRowArray: object[] = [];
-    for (let i = 0; i < columnsArray.length; i++) {
-      // For every number in columnsArray add bars.
-      const currentRowArray: TemplateResult[] = [];
-      for (let x = 0; x < columnsArray[i]; x++) {
-        const index = i * this._config.columns + x;
-        const config = this._configArray[index];
-        const state = this.hass!.states[config.entity];
-        if (!state) {
-          currentRowArray.push(html`
-            <div class="warning" style="margin-bottom: 8px;">
-              ${localize('common.entity_not_available')}: ${config.entity}
-            </div>
-          `);
-          continue;
-        }
-
-        // If attribute is defined use attribute value as bar value.
-        let entityState;
-        if (config.attribute) {
-          entityState = state.attributes[config.attribute];
-        } else {
-          entityState = state.state;
-        }
-
-        // Contine if severity hide is defined.
-        if (config.severity) {
-          if (this._computeSeverityVisibility(entityState, index)) {
-            continue;
-          }
-        }
-
-        // If limit_value is defined limit the displayed value to min and max.
-        if (config.limit_value) {
-          entityState = Math.min(entityState, config.max);
-          entityState = Math.max(entityState, config.min);
-        }
-
-        // If decimal is defined check if NaN and apply number fix.
-        if (!isNaN(Number(entityState))) {
-          if (config.decimal == 0) entityState = Number(entityState).toFixed(0);
-          else if (config.decimal) entityState = Number(entityState).toFixed(config.decimal);
-        }
-
-        // Defined height and check for configured height.
-        let barHeight: string | number = 40;
-        if (config.height) barHeight = config.height;
-
-        // Set style variables based on direction.
-        let alignItems = 'stretch';
-        let backgroundMargin = '0px 0px 0px 13px';
-        let barDirection = 'right';
-        let flexDirection = 'row';
-        let markerDirection = 'left';
-        let markerStyle = 'height: 100%; width: 2px;';
-
-        switch (config.direction) {
-          case 'right':
-            barDirection = 'right';
-            markerDirection = 'left';
-            break;
-          case 'up':
-            backgroundMargin = '0px';
-            barDirection = 'top';
-            flexDirection = 'column-reverse';
-            markerDirection = 'bottom';
-            markerStyle = 'height: 2px; width: 100%;';
-            break;
-        }
-
-        // Set icon position html.
-        let iconOutside;
-        let iconInside;
-        let icon;
-        if (this._computeSeverityIcon(entityState, index)) {
-          icon = this._computeSeverityIcon(entityState, index);
-        } else if (config.icon) {
-          icon = config.icon;
-        } else if (state.attributes.icon) {
-          icon = state.attributes.icon;
-        } else {
-          icon = domainIcon(computeDomain(config.entity), entityState);
-        }
-        switch (config.positions.icon) {
-          case 'outside':
-            iconOutside = html`
-              <bar-card-iconbar>
-                <ha-icon icon="${icon}"></ha-icon>
-              </bar-card-iconbar>
-            `;
-            break;
-          case 'inside':
-            iconInside = html`
-              <bar-card-iconbar>
-                <ha-icon icon="${icon}"></ha-icon>
-              </bar-card-iconbar>
-            `;
-            backgroundMargin = '0px';
-            break;
-          case 'off':
-            backgroundMargin = '0px';
-            break;
-        }
-
-        // Check for configured name otherwise use friendly name.
-        const name = config.name ? config.name : state.attributes.friendly_name;
-
-        // Set name html based on position.
-        let nameOutside;
-        let nameInside;
-        switch (config.positions.name) {
-          case 'outside':
-            nameOutside = html`
-              <bar-card-name
-                class="${config.entity_row ? 'name-outside' : ''}"
-                style="${config.direction == 'up' ? '' : config.width ? `width: calc(100% - ${config.width});` : ''}"
-                >${name}</bar-card-name
-              >
-            `;
-            backgroundMargin = '0px';
-            break;
-          case 'inside':
-            nameInside = html`
-              <bar-card-name>${name}</bar-card-name>
-            `;
-            break;
-          case 'off':
-            break;
-        }
-
-        // Check for configured unit of measurement otherwise use attribute value.
-        let unitOfMeasurement;
-        if (isNaN(Number(entityState))) {
-          unitOfMeasurement = '';
-        } else {
-          if (config.unit_of_measurement) {
-            unitOfMeasurement = config.unit_of_measurement;
-          } else {
-            unitOfMeasurement = state.attributes.unit_of_measurement;
-          }
-        }
-
-        // Set min and max html based on position.
-        let minMaxOutside;
-        let minMaxInside;
-        switch (config.positions.minmax) {
-          case 'outside':
-            minMaxOutside = html`
-              <bar-card-min>${config.min}${unitOfMeasurement}</bar-card-min>
-              <bar-card-divider>/</bar-card-divider>
-              <bar-card-max>${config.max}${unitOfMeasurement}</bar-card-max>
-            `;
-            break;
-          case 'inside':
-            minMaxInside = html`
-              <bar-card-min class="${config.direction == 'up' ? 'min-direction-up' : 'min-direction-right'}"
-                >${config.min}${unitOfMeasurement}</bar-card-min
-              >
-              <bar-card-divider>/</bar-card-divider>
-              <bar-card-max> ${config.max}${unitOfMeasurement}</bar-card-max>
-            `;
-            break;
-          case 'off':
-            break;
-        }
-
-        // Set value html based on position.
-        let valueOutside;
-        let valueInside;
-        switch (config.positions.value) {
-          case 'outside':
-            valueOutside = html`
-              <bar-card-value class="${config.direction == 'up' ? 'value-direction-up' : 'value-direction-right'}"
-                >${config.complementary ? config.max - entityState : entityState} ${unitOfMeasurement}</bar-card-value
-              >
-            `;
-            break;
-          case 'inside':
-            valueInside = html`
-              <bar-card-value
-                class="${config.positions.minmax == 'inside'
-                  ? ''
-                  : config.direction == 'up'
-                  ? 'value-direction-up'
-                  : 'value-direction-right'}"
-                >${config.complementary ? config.max - entityState : entityState} ${unitOfMeasurement}</bar-card-value
-              >
-            `;
-            break;
-          case 'off':
-            backgroundMargin = '0px';
-            break;
-        }
-
-        // Set indicator and animation state based on value change.
-        let indicatorText = '';
-        if (entityState > this._stateArray[index]) {
-          indicatorText = '▲';
-          if (config.direction == 'up') this._animationState[index] = 'animation-increase-vertical';
-          else this._animationState[index] = 'animation-increase';
-        } else if (entityState < this._stateArray[index]) {
-          indicatorText = '▼';
-          if (config.direction == 'up') this._animationState[index] = 'animation-decrease-vertical';
-          else this._animationState[index] = 'animation-decrease';
-        } else {
-          this._animationState[index] = this._animationState[index];
-        }
-        if (isNaN(Number(entityState))) {
-          indicatorText = '';
-        }
-
-        // Set bar color.
-        const barColor = this._computeBarColor(entityState, index);
-
-        // Set indicator html based on position.
-        let indicatorOutside;
-        let indicatorInside;
-        switch (config.positions.indicator) {
-          case 'outside':
-            indicatorOutside = html`
-              <bar-card-indicator
-                class="${config.direction == 'up' ? '' : 'indicator-direction-right'}"
-                style="--bar-color: ${barColor};"
-                >${indicatorText}</bar-card-indicator
-              >
-            `;
-            break;
-          case 'inside':
-            indicatorInside = html`
-              <bar-card-indicator style="--bar-color: ${barColor};">${indicatorText}</bar-card-indicator>
-            `;
-            break;
-          case 'off':
-            break;
-        }
-
-        // Set bar percent and marker percent based on value difference.
-        const barPercent = this._computePercent(entityState, index);
-        const targetMarkerPercent = this._computePercent(config.target, index);
-        let targetStartPercent = barPercent;
-        let targetEndPercent = this._computePercent(config.target, index);
-        if (targetEndPercent < targetStartPercent) {
-          targetStartPercent = targetEndPercent;
-          targetEndPercent = barPercent;
-        }
-
-        // Set bar width if configured.
-        let barWidth = '';
-        if (config.width) {
-          alignItems = 'center';
-          barWidth = `width: ${config.width}`;
-        }
-
-        // Set animation state inside array.
-        const animation = this._animationState[index];
-        let animationDirection = 'right';
-        let animationPercent = barPercent * 100;
-        let animationClass = 'animationbar-horizontal';
-        if (animation == 'animation-increase-vertical' || animation == 'animation-decrease-vertical') {
-          animationDirection = 'bottom';
-          animationClass = 'animationbar-vertical';
-          animationPercent = (100 - barPercent) * 100;
-        }
-
-        // Add current bar to row array.
-        currentRowArray.push(html`
-          <bar-card-card
-            style="flex-direction: ${flexDirection}; align-items: ${alignItems};"
-            @action=${this._handleAction}
-            .config=${config}
-            .actionHandler=${actionHandler({
-              hasHold: hasAction(config.hold_action),
-              hasDoubleClick: hasAction(config.double_tap_action),
-            })}
-          >
-            ${iconOutside} ${indicatorOutside} ${nameOutside}
-            <bar-card-background
-              style="margin: ${backgroundMargin}; height: ${barHeight}${typeof barHeight == 'number'
-                ? 'px'
-                : ''}; ${barWidth}"
-            >
-              <bar-card-backgroundbar style="--bar-color: ${barColor};"></bar-card-backgroundbar>
-              ${config.animation.state == 'on'
-                ? html`
-                    <bar-card-animationbar
-                      style="animation: ${animation} ${config.animation
-                        .speed}s infinite ease-out; --bar-percent: ${animationPercent}%; --bar-color: ${barColor}; --animation-direction: ${animationDirection};"
-                      class="${animationClass}"
-                    ></bar-card-animationbar>
-                  `
-                : ''}
-              <bar-card-currentbar
-                style="--bar-color: ${barColor}; --bar-percent: ${barPercent}%; --bar-direction: ${barDirection}"
-              ></bar-card-currentbar>
-              ${config.target
-                ? html`
-                    <bar-card-targetbar
-                      style="--bar-color: ${barColor}; --bar-percent: ${targetStartPercent}%; --bar-target-percent: ${targetEndPercent}%; --bar-direction: ${barDirection};"
-                    ></bar-card-targetbar>
-                    <bar-card-markerbar
-                      style="--bar-color: ${barColor}; --bar-target-percent: ${targetMarkerPercent}%; ${markerDirection}: calc(${targetMarkerPercent}% - 1px); ${markerStyle}}"
-                    ></bar-card-markerbar>
-                  `
-                : ''}
-              <bar-card-contentbar
-                class="${config.direction == 'up' ? 'contentbar-direction-up' : 'contentbar-direction-right'}"
-              >
-                ${iconInside} ${indicatorInside} ${nameInside} ${minMaxInside} ${valueInside}
-              </bar-card-contentbar>
-            </bar-card-background>
-            ${minMaxOutside} ${valueOutside}
-          </bar-card-card>
-        `);
-
-        // Set entity state inside array if changed.
-        if (entityState !== this._stateArray[index]) {
-          this._stateArray[index] = entityState;
-        }
-      }
-
-      // Add all bars for this row to array.
-      perRowArray.push(currentRowArray);
-    }
-
-    // Create array containing all rows.
-    let rowFlexDirection = 'column';
-    if (this._config.columns || this._config.stack) rowFlexDirection = 'row';
-
-    const rowArray: TemplateResult[] = [];
-    for (const row of perRowArray) {
-      rowArray.push(html`
-        <bar-card-row style="flex-direction: ${rowFlexDirection};">${row}</bar-card-row>
-      `);
-    }
-    return rowArray;
-  }
-
-  private _computeBarColor(value: string, index: number): string {
-    const config = this._configArray[index];
-    let barColor;
-    if (config.severity) {
-      barColor = this._computeSeverityColor(value, index);
-    } else if (value == 'unavailable') {
-      barColor = `var(--bar-card-disabled-color, ${config.color})`;
-    } else {
-      barColor = config.color;
-    }
-    return barColor;
-  }
-
-  private _computeSeverityColor(value: string, index: number): unknown {
-    const config = this._configArray[index];
-    const numberValue = Number(value);
-    const sections = config.severity;
-    let color: undefined | string;
-
-    if (isNaN(numberValue)) {
-      sections.forEach(section => {
-        if (value == section.text) {
-          color = section.color;
-        }
-      });
-    } else {
-      sections.forEach(section => {
-        if (numberValue >= section.from && numberValue <= section.to) {
-          color = section.color;
-        }
-      });
-    }
-
-    if (color == undefined) color = config.color;
-    return color;
-  }
-
-  private _computeSeverityVisibility(value: string, index: number): boolean {
-    const config = this._configArray[index];
-    const numberValue = Number(value);
-    const sections = config.severity;
-    let hide = false;
-
-    if (isNaN(numberValue)) {
-      sections.forEach(section => {
-        if (value == section.text) {
-          hide = section.hide;
-        }
-      });
-    } else {
-      sections.forEach(section => {
-        if (numberValue >= section.from && numberValue <= section.to) {
-          hide = section.hide;
-        }
-      });
-    }
-    return hide;
-  }
-
-  private _computeSeverityIcon(value: string, index: number): string | boolean {
-    const config = this._configArray[index];
-    const numberValue = Number(value);
-    const sections = config.severity;
-    let icon = false;
-
-    if (!sections) return false;
-
-    if (isNaN(numberValue)) {
-      sections.forEach(section => {
-        if (value == section.text) {
-          icon = section.icon;
-        }
-      });
-    } else {
-      sections.forEach(section => {
-        if (numberValue >= section.from && numberValue <= section.to) {
-          icon = section.icon;
-        }
-      });
-    }
-    return icon;
-  }
-
-  private _computePercent(value: string, index: number): number {
-    const config = this._configArray[index];
-    const numberValue = Number(value);
-
-    if (value == 'unavailable') return 0;
-    if (isNaN(numberValue)) return 100;
-
-    switch (config.direction) {
-      case 'right-reverse':
-      case 'left-reverse':
-      case 'up-reverse':
-      case 'down-reverse':
-        return 100 - (100 * (numberValue - config.min)) / (config.max - config.min);
-      default:
-        return (100 * (numberValue - config.min)) / (config.max - config.min);
-    }
-  }
-
-  private _handleAction(ev): void {
-    if (this.hass && ev.target.config && ev.detail.action) {
-      handleAction(this, this.hass, ev.target.config, ev.detail.action);
-    }
+  setConfig(config: BarCardConfig): void {
+    validateConfig(config);
+    this.previous.clear();
+    this.config = structuredClone(config);
   }
 
   getCardSize(): number {
-    if (this._config.height) {
-      const heightString = this._config.height.toString();
-      const cardSize = Math.trunc((Number(heightString.replace('px', '')) / 50) * this._rowAmount);
-      return cardSize + 1;
-    } else {
-      return this._rowAmount + 1;
+    const count = this.config?.entities?.length ?? 1;
+    const columns =
+      this.config?.stack === 'horizontal' ? count : Math.max(1, Number(this.config?.columns ?? 1));
+    const rows = Math.ceil(count / columns);
+    const height = Number.parseInt(String(this.config?.height ?? '40'), 10);
+    return Math.max(
+      1,
+      Math.ceil((rows * (Number.isFinite(height) ? height + 16 : 56) + (this.config?.title ? 44 : 0)) / 50),
+    );
+  }
+
+  getGridOptions(): { columns: number; min_columns: number; rows: number; min_rows: number } {
+    return { columns: 6, min_columns: 3, rows: Math.max(1, this.getCardSize()), min_rows: 1 };
+  }
+
+  protected render(): TemplateResult {
+    if (!this.config || !this.hass) return html``;
+    const bars = resolveBars(this.config, this.hass.states);
+    const columns =
+      this.config.stack === 'horizontal' ? bars.length : Math.max(1, Number(this.config.columns ?? 1));
+    const row = this.config.entity_row;
+    return html`
+      <ha-card class=${row ? 'entity-row' : ''}>
+        ${this.config.title && !row ? html`<div class="card-title">${this.config.title}</div>` : nothing}
+        <div id="states" class="bars" style=${styleMap({ '--columns': String(columns) })}>
+          ${bars.map((bar) => this.renderBar(bar))}
+        </div>
+      </ha-card>
+    `;
+  }
+
+  private renderBar(bar: ResolvedBar): TemplateResult | typeof nothing {
+    const state = this.hass?.states[bar.entity];
+    if (!state) return html`<div class="bar-error" role="status">Entity not available: ${bar.entity}</div>`;
+    const raw = bar.attribute ? state.attributes[bar.attribute] : state.state;
+    const number = numericValue(raw);
+    const severity = matchingSeverity(raw, bar.severity);
+    if (severity?.hide) return nothing;
+    const bounded =
+      number === undefined
+        ? undefined
+        : bar.limit_value
+          ? Math.max(bar.min, Math.min(bar.max, number))
+          : number;
+    const fill = percent(bounded, bar.min, bar.max);
+    const target = bar.target === undefined ? undefined : percent(numericValue(bar.target), bar.min, bar.max);
+    const color =
+      severity?.color ||
+      (number === undefined ? 'var(--bar-card-disabled-color, var(--disabled-text-color))' : bar.color);
+    const icon = severity?.icon || bar.icon || state.attributes.icon;
+    const name = bar.name || state.attributes.friendly_name || bar.entity;
+    const unit = bar.unit_of_measurement ?? state.attributes.unit_of_measurement ?? '';
+    const value = displayValue(bounded ?? raw, bar, String(unit));
+    const previous = this.previous.get(bar.entity);
+    const indicator =
+      number === undefined || previous === undefined || number === previous
+        ? ''
+        : number > previous
+          ? '▲'
+          : '▼';
+    if (number !== undefined) this.previous.set(bar.entity, number);
+    const vertical = ['up', 'down', 'up-reverse', 'down-reverse'].includes(bar.direction);
+    const reverse = ['left', 'down', 'right-reverse', 'up-reverse'].includes(bar.direction);
+    const minmax = html`<span class="minmax">${bar.min} / ${bar.max}${unit ? ` ${unit}` : ''}</span>`;
+    const iconTemplate = icon ? html`<ha-icon .icon=${String(icon)} aria-hidden="true"></ha-icon>` : nothing;
+    const indicatorTemplate = indicator
+      ? html`<span class="indicator" aria-label=${indicator === '▲' ? 'Increasing' : 'Decreasing'}
+          >${indicator}</span
+        >`
+      : nothing;
+    const style = styleMap({
+      '--bar-color': color,
+      '--bar-progress': `${fill}%`,
+      '--bar-target': `${target ?? 0}%`,
+      '--bar-height': typeof bar.height === 'number' ? `${bar.height}px` : bar.height || '40px',
+      '--bar-width': bar.width || '100%',
+      '--animation-speed': `${Math.max(0.2, Number(bar.animation.speed) || 5)}s`,
+    });
+    return html`
+      <bar-card-card
+        class=${`${vertical ? 'vertical' : 'horizontal'} ${reverse ? 'reverse' : ''}`}
+        style=${style}
+        role="button"
+        tabindex="0"
+        aria-label=${`${name}, ${value}`}
+        @click=${(event: MouseEvent) => this.onClick(event, bar)}
+        @dblclick=${(event: MouseEvent) => this.onDoubleClick(event, bar)}
+        @keydown=${(event: KeyboardEvent) => this.onKeydown(event, bar)}
+        @pointerdown=${(event: PointerEvent) => this.onPointerDown(event, bar)}
+        @pointerup=${this.onPointerEnd}
+        @pointercancel=${this.onPointerEnd}
+        @pointerleave=${this.onPointerEnd}
+      >
+        <div class="outside leading">
+          ${bar.positions.icon === 'outside' ? iconTemplate : nothing}
+          ${bar.positions.name === 'outside' ? html`<span class="name">${name}</span>` : nothing}
+        </div>
+        <bar-card-background
+          role="progressbar"
+          aria-label=${String(name)}
+          aria-valuemin=${String(bar.min)}
+          aria-valuemax=${String(bar.max)}
+          aria-valuenow=${number === undefined ? nothing : String(Math.max(bar.min, Math.min(bar.max, number)))}
+          aria-valuetext=${value}
+        >
+          <bar-card-backgroundbar></bar-card-backgroundbar>
+          <bar-card-currentbar class=${bar.animation.state === 'on' ? 'animated' : ''}></bar-card-currentbar>
+          ${target === undefined ? nothing : html`<bar-card-markerbar></bar-card-markerbar>`}
+          <bar-card-contentbar>
+            ${bar.positions.icon === 'inside' ? iconTemplate : nothing}
+            ${bar.positions.name === 'inside' ? html`<span class="name">${name}</span>` : nothing}
+            ${bar.positions.minmax === 'inside' ? minmax : nothing}
+            ${bar.positions.value === 'inside' ? html`<span class="value">${value}</span>` : nothing}
+            ${bar.positions.indicator === 'inside' ? indicatorTemplate : nothing}
+          </bar-card-contentbar>
+        </bar-card-background>
+        <div class="outside trailing">
+          ${bar.positions.indicator === 'outside' ? indicatorTemplate : nothing}
+          ${bar.positions.minmax === 'outside' ? minmax : nothing}
+          ${bar.positions.value === 'outside' ? html`<span class="value">${value}</span>` : nothing}
+        </div>
+      </bar-card-card>
+    `;
+  }
+
+  private dispatchAction(bar: ResolvedBar, action: 'tap' | 'hold' | 'double_tap'): void {
+    this.dispatchEvent(
+      new CustomEvent('hass-action', {
+        bubbles: true,
+        composed: true,
+        detail: { config: bar, action },
+      }),
+    );
+  }
+
+  private onClick(event: MouseEvent, bar: ResolvedBar): void {
+    if (this.held) {
+      this.held = false;
+      return;
     }
+    if (bar.double_tap_action) {
+      window.clearTimeout(this.tapTimer);
+      this.tapTimer = window.setTimeout(() => this.dispatchAction(bar, 'tap'), 250);
+    } else this.dispatchAction(bar, 'tap');
+    event.stopPropagation();
+  }
+
+  private onDoubleClick(event: MouseEvent, bar: ResolvedBar): void {
+    if (!bar.double_tap_action) return;
+    window.clearTimeout(this.tapTimer);
+    this.dispatchAction(bar, 'double_tap');
+    event.stopPropagation();
+  }
+
+  private onKeydown(event: KeyboardEvent, bar: ResolvedBar): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    if (!event.repeat) this.dispatchAction(bar, 'tap');
+  }
+
+  private onPointerDown(event: PointerEvent, bar: ResolvedBar): void {
+    if (!bar.hold_action || event.button !== 0) return;
+    this.activePointer = event.pointerId;
+    this.held = false;
+    this.holdTimer = window.setTimeout(() => {
+      this.held = true;
+      this.dispatchAction(bar, 'hold');
+    }, 500);
+  }
+
+  private onPointerEnd = (event: PointerEvent): void => {
+    if (this.activePointer !== undefined && event.pointerId !== this.activePointer) return;
+    window.clearTimeout(this.holdTimer);
+    this.activePointer = undefined;
+  };
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.clearTimeout(this.holdTimer);
+    window.clearTimeout(this.tapTimer);
   }
 }
+
+declare global {
+  interface Window {
+    customCards?: Array<Record<string, unknown>>;
+  }
+}
+window.customCards = window.customCards || [];
+if (!window.customCards.some((card) => card.type === 'bar-card')) {
+  window.customCards.push({
+    type: 'bar-card',
+    name: 'Bar Card',
+    description: 'Modern, configurable bars for entity values',
+    preview: true,
+    documentationURL: 'https://github.com/Adrian-RDA/bar-card',
+  });
+}
+console.info(`BAR-CARD ${VERSION}`);

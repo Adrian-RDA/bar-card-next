@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bar Card development preview</title>
+    <style>
+      :root { font-family: Inter, Arial, sans-serif; color: #243244; background: #edf2f7; --primary-text-color: #243244; --secondary-text-color: #627084; --primary-color: #0d8ac7; --card-background-color: #fff; --secondary-background-color: #eef4f8; --divider-color: #d8e1e9; --ha-card-border-radius: 16px; }
+      body { margin: 0; padding: 32px; }
+      main { max-width: 1100px; margin: auto; display: grid; gap: 28px; }
+      h1 { margin: 0; font-size: 1.6rem; }
+      .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+      ha-card { display: block; background: var(--card-background-color); border-radius: var(--ha-card-border-radius); box-shadow: 0 4px 20px #10283816; }
+      ha-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; }
+      ha-icon::after { content: '●'; font-size: 16px; }
+      body.dark { color: #e8edf4; background: #121a24; --primary-text-color: #e8edf4; --secondary-text-color: #b1becd; --primary-color: #4cb5ed; --card-background-color: #202c3a; --secondary-background-color: #2a3a4d; --divider-color: #435266; }
+      button { border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+      @media (max-width: 740px) { body { padding: 16px; } .preview-grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div><h1>Bar Card preview</h1><p>Development fixture for layout, editor, and theme checks. <button id="theme">Toggle theme</button></p></div>
+      <div class="preview-grid"><bar-card id="horizontal"></bar-card><bar-card id="vertical"></bar-card></div>
+      <bar-card-editor id="editor"></bar-card-editor>
+    </main>
+    <script type="module">
+      import './src/bar-card.ts';
+      const hass = { language: 'en', states: {
+        'sensor.battery': { state: '72', attributes: { friendly_name: 'Battery', unit_of_measurement: '%', icon: 'mdi:battery' } },
+        'sensor.temperature': { state: '21.7', attributes: { friendly_name: 'Living room', unit_of_measurement: '°C', icon: 'mdi:thermometer' } },
+        'sensor.humidity': { state: '48', attributes: { friendly_name: 'Humidity', unit_of_measurement: '%', icon: 'mdi:water-percent' } },
+        'sensor.invalid': { state: 'unavailable', attributes: { friendly_name: 'Offline sensor' } },
+      }};
+      const horizontal = document.querySelector('#horizontal');
+      const vertical = document.querySelector('#vertical');
+      const editor = document.querySelector('#editor');
+      const config = { title: 'Home overview', columns: 1, entities: [
+        { entity: 'sensor.battery', severity: [{ from: 0, to: 25, color: '#d94848' }, { from: 26, to: 100, color: '#13a88a' }], target: 80 },
+        { entity: 'sensor.temperature', min: 0, max: 35, color: '#178ed0', decimal: 1 },
+        { entity: 'sensor.invalid' },
+      ]};
+      horizontal.hass = hass;
+      horizontal.setConfig(config);
+      vertical.hass = hass;
+      vertical.setConfig({ title: 'Climate', direction: 'up', height: '170px', columns: 2, entities: [
+        { entity: 'sensor.temperature', min: 0, max: 35, color: '#178ed0', decimal: 1 },
+        { entity: 'sensor.humidity', color: '#8558c6' },
+      ]});
+      editor.hass = hass;
+      editor.setConfig(config);
+      editor.addEventListener('config-changed', (event) => horizontal.setConfig(event.detail.config));
+      document.querySelector('#theme').addEventListener('click', () => document.body.classList.toggle('dark'));
+    </script>
+  </body>
+</html>

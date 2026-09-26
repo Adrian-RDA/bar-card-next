@@ -1,32 +1,87 @@
-import { ActionConfig } from 'custom-card-helpers';
+export interface HassEntity {
+  state: string;
+  attributes: Record<string, unknown> & {
+    friendly_name?: string;
+    icon?: string;
+    unit_of_measurement?: string;
+  };
+}
 
-export interface BarCardConfig {
-  entity_config: boolean;
-  animation: any;
-  attribute: any;
-  color: string;
-  columns: number;
-  complementary: boolean;
-  decimal: any;
-  direction: string;
-  double_tap_action?: ActionConfig;
-  entities: any;
-  entity_row: boolean;
-  entity: string;
-  height: string | number;
-  hold_action?: ActionConfig;
-  icon: any;
-  limit_value: boolean;
-  max: number;
-  min: number;
-  name: string;
-  positions: any;
-  severity: any;
-  stack: string;
+export interface HomeAssistant {
+  states: Record<string, HassEntity>;
+  locale?: { language?: string };
+  language?: string;
+}
+
+export interface ActionConfig {
+  action: string;
+  [key: string]: unknown;
+}
+
+export interface SeverityRule {
+  from?: number;
+  to?: number;
+  text?: string;
+  color?: string;
+  icon?: string;
+  hide?: boolean;
+}
+
+export type Placement = 'inside' | 'outside' | 'off';
+
+export interface BarPositions {
+  icon?: Placement;
+  indicator?: Placement;
+  name?: Placement;
+  minmax?: Placement;
+  value?: Placement;
+}
+
+export interface BarAnimation {
+  state?: 'on' | 'off';
+  speed?: number;
+}
+
+export interface BarOptions {
+  entity?: string;
+  attribute?: string;
+  name?: string;
+  icon?: string;
+  color?: string;
+  min?: number;
+  max?: number;
+  target?: number;
+  decimal?: number;
+  unit_of_measurement?: string;
+  limit_value?: boolean;
+  complementary?: boolean;
+  direction?: string;
+  height?: string | number;
+  width?: string;
+  positions?: BarPositions;
+  severity?: SeverityRule[];
+  animation?: BarAnimation;
+  entity_config?: boolean;
+  entity_row?: boolean;
   tap_action?: ActionConfig;
-  target: any;
-  title: string;
-  type: string;
-  unit_of_measurement: string;
-  width: string;
+  hold_action?: ActionConfig;
+  double_tap_action?: ActionConfig;
+}
+
+export interface BarCardConfig extends BarOptions {
+  type?: string;
+  title?: string;
+  entities?: Array<string | BarOptions>;
+  columns?: number;
+  stack?: string;
+}
+
+export interface ResolvedBar extends BarOptions {
+  entity: string;
+  color: string;
+  min: number;
+  max: number;
+  direction: string;
+  positions: Required<BarPositions>;
+  animation: Required<BarAnimation>;
 }
