@@ -70,7 +70,8 @@ Global options apply to every bar. Options inside an `entities` item override th
 | `positions`                                      | See below              | Place the icon, indicator, name, min/max, and value.                      |
 | `severity`                                       | None                   | Rules for color, icon, or visibility.                                     |
 | `animation`                                      | Value changes on       | Animate changes, pulse continuously, or both.                             |
-| `entity_row`                                     | `false`                | Transparent background for use in an entities card.                       |
+| `entity_row`                                     | `false`                | Use the bar inside an entities card (transparent background and no outer spacing). |
+| `border_radius`                                  | HA theme               | Bar/card corner radius, for example `12px`; empty follows Home Assistant's radius. |
 | `entity_config`                                  | `false`                | Read supported card options from entity attributes.                       |
 | `tap_action`, `hold_action`, `double_tap_action` | Home Assistant default | Standard Home Assistant card actions.                                     |
 
@@ -101,6 +102,10 @@ For square corners:
 ```yaml
 shape: square
 ```
+
+### Home Assistant layout settings
+
+For the card section to size itself to the bars, enable Home Assistant's **Automatic height** layout option. With a fixed section height, the dashboard reserves more space than the card content needs. This is especially noticeable when `entity_row` is disabled; automatic height also prevents the card background from extending beyond its visual container.
 
 ## Upgrading from 3.x
 

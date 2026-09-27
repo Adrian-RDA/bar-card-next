@@ -47,6 +47,11 @@ export class BarCardEditor extends LitElement {
     return typeof entry === 'string' ? { entity: entry } : (entry ?? {});
   }
 
+  private selectedLabel(): string {
+    const entity = this.scope().entity ?? '';
+    return this.hass?.states[entity]?.attributes.friendly_name || entity || `Bar ${this.selected + 1}`;
+  }
+
   private edit(update: (config: BarCardConfig, scope: BarOptions) => void): void {
     const next = this.normalized();
     const scope = this.selected === -1 ? next : (next.entities![this.selected] as BarOptions);
@@ -196,10 +201,13 @@ export class BarCardEditor extends LitElement {
                 this.tab = 'appearance';
               }}
             >
-              <span class="entity-name"
-                >${this.hass?.states[entity]?.attributes.friendly_name || entity || this.t('Choose an entity')}</span
-              >
-              <small>${entity}</small>
+              <span class="entity-index" aria-hidden="true">${index + 1}</span>
+              <span class="entity-copy">
+                <span class="entity-name"
+                  >${this.hass?.states[entity]?.attributes.friendly_name || entity || this.t('Choose an entity')}</span
+                >
+                <small>${entity}</small>
+              </span>
             </button>
             <div class="row-actions">
               <button
@@ -243,16 +251,13 @@ export class BarCardEditor extends LitElement {
     const entity = this.scope().entity ?? '';
     return html`<label class="field"
       ><span>${this.t('Selected entity')}</span>
-      <input
-        list="bar-entities"
+      <ha-entity-picker
+        .hass=${this.hass}
         .value=${entity}
-        placeholder="sensor.example"
-        @change=${(e: Event) => this.change('entity', (e.target as HTMLInputElement).value)}
-      />
-      <datalist id="bar-entities">
-        ${Object.keys(this.hass?.states ?? {}).map((id) => html`<option value=${id}></option>`)}
-      </datalist>
-      <small>${this.t('Start typing an entity ID and choose from the suggestions.')}</small>
+        allow-custom-entity
+        @value-changed=${(e: CustomEvent<{ value?: string }>) => this.change('entity', e.detail.value ?? '')}
+      ></ha-entity-picker>
+      <small>${this.t('Choose an entity using Home Assistant’s entity picker.')}</small>
     </label>`;
   }
 
@@ -274,7 +279,20 @@ export class BarCardEditor extends LitElement {
         ${this.field('Direction', 'direction', 'select', ['right', 'left', 'up', 'down'])}
         ${this.field('Height', 'height', 'text', [], 'Example: 40px or 180px for vertical bars')}
         ${this.field('Width', 'width', 'text', [], 'Example: 100% or 240px')}
-        ${this.field('Entity row', 'entity_row', 'checkbox')}
+        ${this.field(
+          'Use in an entities card',
+          'entity_row',
+          'checkbox',
+          [],
+          'Removes the card background and outer spacing.',
+        )}
+        ${this.field(
+          'Border radius',
+          'border_radius',
+          'text',
+          [],
+          'Example: 12px; empty uses the Home Assistant theme.',
+        )}
         ${this.field('Use entity attributes as options', 'entity_config', 'checkbox')}
       </div>
       <h4>${this.t('Element positions')}</h4>
@@ -677,7 +695,7 @@ export class BarCardEditor extends LitElement {
         </div>
         <span class="scope"
           >${this.t('Editing:')}
-          ${this.selected === -1 ? this.t('All bars') : this.scope().entity || `Bar ${this.selected + 1}`}</span
+          ${this.selected === -1 ? this.t('All bars') : this.selectedLabel()}</span
         >
       </header>
       <div class="scope-switch">
@@ -695,11 +713,12 @@ export class BarCardEditor extends LitElement {
             html`<button
               type="button"
               class=${this.selected === index ? 'active' : ''}
+              aria-label=${`${this.t('Bar')} ${index + 1}`}
               @click=${() => {
                 this.selected = index;
               }}
             >
-              ${typeof entry === 'string' ? entry : entry.name || entry.entity || `Bar ${index + 1}`}
+              ${index + 1}
             </button>`,
         )}
       </div>
@@ -914,10 +933,28 @@ export class BarCardEditor extends LitElement {
     .entity-select {
       flex: 1;
       display: flex;
-      flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
+      gap: 10px;
       min-width: 0;
       text-align: left;
+    }
+    .entity-copy {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .entity-index {
+      flex: none;
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      margin: 0 0 0 8px;
+      border-radius: 50%;
+      background: var(--secondary-background-color, #eee);
+      color: var(--primary-color);
+      font-size: 0.78rem;
+      font-weight: 700;
     }
     .entity-select small,
     .entity-name {

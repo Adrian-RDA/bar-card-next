@@ -16,8 +16,8 @@ const de: Record<string, string> = {
   'Editor sections': 'Editorbereiche',
   'Choose an entity': 'Entität auswählen',
   'Selected entity': 'Ausgewählte Entität',
-  'Start typing an entity ID and choose from the suggestions.':
-    'Entitäts-ID eingeben und aus den Vorschlägen wählen.',
+  'Choose an entity using Home Assistant’s entity picker.':
+    'Entität mit dem nativen Home-Assistant-Entitätsauswahlfeld auswählen.',
   'Layout, color, and visible labels.': 'Layout, Farbe und sichtbare Beschriftungen.',
   'Card title': 'Kartentitel',
   Columns: 'Spalten',
@@ -31,7 +31,12 @@ const de: Record<string, string> = {
   Direction: 'Richtung',
   Height: 'Höhe',
   Width: 'Breite',
-  'Entity row': 'Entitätenzeile',
+  'Use in an entities card': 'In einer Entitätenkarte verwenden',
+  'Removes the card background and outer spacing.': 'Entfernt Kartenhintergrund und äußeren Abstand.',
+  'Border radius': 'Eckenradius',
+  'Example: 12px; empty uses the Home Assistant theme.':
+    'Beispiel: 12px; leer verwendet das Home-Assistant-Theme.',
+  Bar: 'Balken',
   'Use entity attributes as options': 'Entitätsattribute als Optionen verwenden',
   'Element positions': 'Positionen der Elemente',
   Indicator: 'Indikator',

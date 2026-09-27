@@ -61,6 +61,7 @@ export interface BarOptions {
   direction?: string;
   height?: string | number;
   width?: string;
+  border_radius?: string | number;
   positions?: BarPositions;
   severity?: SeverityRule[];
   animation?: BarAnimation;

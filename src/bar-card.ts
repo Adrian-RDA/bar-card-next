@@ -69,8 +69,17 @@ export class BarCard extends LitElement {
     const columns =
       this.config.stack === 'horizontal' ? bars.length : Math.max(1, Number(this.config.columns ?? 1));
     const row = this.config.entity_row;
+    const cardStyle = styleMap({
+      '--bar-card-border-radius':
+        this.config.border_radius === undefined
+          ? undefined
+          : `${this.config.border_radius}${typeof this.config.border_radius === 'number' ? 'px' : ''}`,
+    });
     return html`
-      <ha-card class=${`${row ? 'entity-row' : ''} ${this.config.shape === 'square' ? 'square' : ''}`}>
+      <ha-card
+        class=${`${row ? 'entity-row' : ''} ${this.config.shape === 'square' ? 'square' : ''}`}
+        style=${cardStyle}
+      >
         ${this.config.title && !row ? html`<div class="card-title">${this.config.title}</div>` : nothing}
         <div id="states" class="bars" style=${styleMap({ '--columns': String(columns) })}>
           ${bars.map((bar, index) => this.renderBar(bar, index))}
@@ -130,6 +139,10 @@ export class BarCard extends LitElement {
       '--bar-target': `${target ?? 0}%`,
       '--bar-height': typeof bar.height === 'number' ? `${bar.height}px` : bar.height || '40px',
       '--bar-width': bar.width || '100%',
+      '--bar-card-border-radius':
+        bar.border_radius === undefined
+          ? undefined
+          : `${bar.border_radius}${typeof bar.border_radius === 'number' ? 'px' : ''}`,
       '--bar-radius':
         bar.shape === 'square'
           ? '0px'

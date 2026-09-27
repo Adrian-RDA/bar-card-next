@@ -11,7 +11,7 @@ export const cardStyles = css`
   ha-card {
     display: block;
     background: var(--ha-card-background, var(--card-background-color, var(--ha-color-surface-default, #fff)));
-    border-radius: var(--ha-card-border-radius, 12px);
+    border-radius: var(--bar-card-border-radius, var(--ha-card-border-radius, 12px));
     box-shadow: var(--ha-card-box-shadow, var(--ha-box-shadow-s, 0 2px 8px #0002));
     overflow: hidden;
   }
