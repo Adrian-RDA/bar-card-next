@@ -36,6 +36,8 @@ const de: Record<string, string> = {
   'Use in an entities card': 'In einer Entitätenkarte verwenden',
   'Removes the card background and outer spacing.': 'Entfernt Kartenhintergrund und äußeren Abstand.',
   'Border radius': 'Eckenradius',
+  'Bar radius': 'Balken-Eckenradius',
+  'Card radius': 'Container-Eckenradius',
   'Example: 12px; empty uses the Home Assistant theme.':
     'Beispiel: 12px; leer verwendet das Home-Assistant-Theme.',
   Bar: 'Balken',

@@ -71,7 +71,8 @@ Global options apply to every bar. Options inside an `entities` item override th
 | `severity`                                       | None                   | Rules for color, icon, or visibility.                                     |
 | `animation`                                      | Value changes on       | Animate changes, pulse continuously, or both.                             |
 | `entity_row`                                     | `false`                | Use the bar inside an entities card (transparent background and no outer spacing). |
-| `border_radius`                                  | HA theme               | Bar/card corner radius, for example `12px`; empty follows Home Assistant's radius. |
+| `border_radius`                                  | HA theme               | Corner radius of the individual bars, for example `12px`; empty follows Home Assistant's radius. |
+| `card_radius`                                    | HA theme               | Corner radius of the outer card container, for example `16px`; empty follows Home Assistant's radius. |
 | `entity_config`                                  | `false`                | Read supported card options from entity attributes.                       |
 | `tap_action`, `hold_action`, `double_tap_action` | Home Assistant default | Standard Home Assistant card actions.                                     |
 

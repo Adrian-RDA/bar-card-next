@@ -62,6 +62,7 @@ export interface BarOptions {
   height?: string | number;
   width?: string;
   border_radius?: string | number;
+  card_radius?: string | number;
   positions?: BarPositions;
   severity?: SeverityRule[];
   animation?: BarAnimation;

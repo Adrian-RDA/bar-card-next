@@ -1,5 +1,6 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import type { TemplateResult } from 'lit';
 import { DEFAULT_POSITIONS } from './config';
 import { translate } from './i18n';
@@ -147,7 +148,7 @@ export class BarCardEditor extends LitElement {
 
   private globalField(
     label: string,
-    key: 'title' | 'columns' | 'stack',
+    key: 'title' | 'columns' | 'stack' | 'card_radius',
     type: FieldType = 'text',
     options: string[] = [],
   ): TemplateResult {
@@ -281,19 +282,14 @@ export class BarCardEditor extends LitElement {
         ${this.field('Direction', 'direction', 'select', ['right', 'left', 'up', 'down'])}
         ${this.field('Height', 'height', 'text', [], 'Example: 40px or 180px for vertical bars')}
         ${this.field('Width', 'width', 'text', [], 'Example: 100% or 240px')}
+        ${this.field('Bar radius', 'border_radius', 'text', [], 'Example: 12px; empty uses the Home Assistant theme.')}
+        ${this.globalField('Card radius', 'card_radius', 'text')}
         ${this.field(
           'Use in an entities card',
           'entity_row',
           'checkbox',
           [],
           'Removes the card background and outer spacing.',
-        )}
-        ${this.field(
-          'Border radius',
-          'border_radius',
-          'text',
-          [],
-          'Example: 12px; empty uses the Home Assistant theme.',
         )}
         ${this.field('Use entity attributes as options', 'entity_config', 'checkbox')}
       </div>
@@ -702,6 +698,14 @@ export class BarCardEditor extends LitElement {
 
   protected render(): TemplateResult {
     if (!this.config) return html``;
+    const editorStyle = styleMap({
+      '--editor-card-radius':
+        this.config.shape === 'square'
+          ? '0px'
+          : this.config.card_radius === undefined
+            ? undefined
+            : `${this.config.card_radius}${typeof this.config.card_radius === 'number' ? 'px' : ''}`,
+    });
     const tabs: Array<[Tab, string]> = [
       ['entities', 'Entities'],
       ['appearance', 'Appearance'],
@@ -709,7 +713,7 @@ export class BarCardEditor extends LitElement {
       ['rules', 'Rules'],
       ['actions', 'Actions'],
     ];
-    return html`<div class="editor">
+    return html`<div class="editor" style=${editorStyle}>
       <header>
         <div>
           <h2>Bar Card Next</h2>
@@ -775,7 +779,7 @@ export class BarCardEditor extends LitElement {
     .editor {
       background: var(--card-background-color, #fff);
       border: 1px solid var(--divider-color, #ddd);
-      border-radius: var(--ha-card-border-radius, 12px);
+      border-radius: var(--editor-card-radius, var(--ha-card-border-radius, 12px));
       overflow: hidden;
     }
     header {
@@ -892,13 +896,14 @@ export class BarCardEditor extends LitElement {
     .fields {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 16px;
+      column-gap: 24px;
+      row-gap: 22px;
+      margin-top: 20px;
     }
     .field {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 7px;
       min-width: 0;
       font-size: 0.86rem;
       font-weight: 600;
@@ -1021,6 +1026,11 @@ export class BarCardEditor extends LitElement {
       .section-head {
         align-items: flex-start;
         flex-direction: column;
+      }
+    }
+    @media (min-width: 561px) and (max-width: 720px) {
+      .fields {
+        grid-template-columns: 1fr;
       }
     }
   `;

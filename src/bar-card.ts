@@ -70,10 +70,10 @@ export class BarCard extends LitElement {
       this.config.stack === 'horizontal' ? bars.length : Math.max(1, Number(this.config.columns ?? 1));
     const row = this.config.entity_row;
     const cardStyle = styleMap({
-      '--bar-card-border-radius':
-        this.config.border_radius === undefined
+      '--bar-card-card-radius':
+        this.config.card_radius === undefined
           ? undefined
-          : `${this.config.border_radius}${typeof this.config.border_radius === 'number' ? 'px' : ''}`,
+          : `${this.config.card_radius}${typeof this.config.card_radius === 'number' ? 'px' : ''}`,
     });
     return html`
       <ha-card
