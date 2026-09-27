@@ -511,10 +511,7 @@ export class BarCardEditor extends LitElement {
             @change=${(e: Event) =>
           this.edit((_config, scope) => {
             const rules = [...(scope.severity ?? [])];
-            const raw =
-              type === 'checkbox'
-                ? (e.target as HTMLInputElement).checked
-                : (e.target as HTMLInputElement).value;
+            const raw = (e.target as HTMLInputElement).value;
             const updated = { ...rules[index] } as Record<string, unknown>;
             if (raw === '') delete updated[key];
             else updated[key] = type === 'number' ? Number(raw) : raw;
@@ -714,7 +711,7 @@ export class BarCardEditor extends LitElement {
           ${this.t('All bars')}
         </button>
         ${this.entries().map(
-          (entry, index) =>
+          (_entry, index) =>
             html`<button
               type="button"
               class=${this.selected === index ? 'active' : ''}
