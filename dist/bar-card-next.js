@@ -1492,7 +1492,7 @@ var Q = class extends W {
             type=${i}
             .value=${String(t[n] ?? "")}
             @change=${(t) => this.edit((r, a) => {
-			let o = [...a.severity ?? []], s = i === "checkbox" ? t.target.checked : t.target.value, c = { ...o[e] };
+			let o = [...a.severity ?? []], s = t.target.value, c = { ...o[e] };
 			s === "" ? delete c[n] : c[n] = i === "number" ? Number(s) : s, o[e] = c, a.severity = o;
 		})}
           ></ha-textfield>`}</label>`;
