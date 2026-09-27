@@ -124,21 +124,22 @@ export class BarCardEditor extends LitElement {
             ></ha-switch>`
           : type === 'select'
             ? html`<ha-select
+                .options=${[
+                  ...(inherited ? [{ value: '', label: this.t('Inherited') }] : []),
+                  ...options.map((option) => ({ value: option, label: this.t(option) })),
+                ]}
                 .value=${String(value ?? '')}
-                @selected=${(e: Event) => this.change(key, (e.target as HTMLSelectElement).value)}
-              >
-                ${inherited ? html`<ha-list-item value="">${this.t('Inherited')}</ha-list-item>` : nothing}
-                ${options.map((option) => html`<ha-list-item value=${option}>${this.t(option)}</ha-list-item>`)}
-              </ha-select>`
-            : html`<ha-textfield
-                type=${type}
+                @selected=${(e: CustomEvent<{ value?: string }>) => this.change(key, e.detail.value ?? '')}
+              ></ha-select>`
+            : html`<ha-input
+                .type=${type === 'number' ? 'number' : 'text'}
                 .value=${value === undefined ? '' : String(value)}
                 placeholder=${placeholder || nothing}
                 @change=${(e: Event) => {
                   const raw = (e.target as HTMLInputElement).value;
                   this.change(key, type === 'number' && raw !== '' ? Number(raw) : raw);
                 }}
-              ></ha-textfield>`
+              ></ha-input>`
       }
       ${hint ? html`<small>${this.t(hint)}</small>` : nothing}
     </label>`;
@@ -156,16 +157,18 @@ export class BarCardEditor extends LitElement {
       ${
         type === 'select'
           ? html`<ha-select
+              .options=${options.map((item) => ({
+                value: item,
+                label: item ? this.t(item) : this.t('Automatic'),
+              }))}
               .value=${String(value ?? '')}
-              @selected=${(e: Event) =>
+              @selected=${(e: CustomEvent<{ value?: string }>) =>
                 this.edit((config) => {
-                  (config as Record<string, unknown>)[key] = (e.target as HTMLSelectElement).value;
+                  (config as Record<string, unknown>)[key] = e.detail.value ?? '';
                 })}
-            >
-              ${options.map((item) => html`<ha-list-item value=${item}>${item ? this.t(item) : this.t('Automatic')}</ha-list-item>`)}
-            </ha-select>`
-          : html`<ha-textfield
-              type=${type}
+            ></ha-select>`
+          : html`<ha-input
+              .type=${type === 'number' ? 'number' : 'text'}
               .value=${value === undefined ? '' : String(value)}
               @change=${(e: Event) =>
                 this.edit((config) => {
@@ -173,7 +176,7 @@ export class BarCardEditor extends LitElement {
                   if (!raw) delete (config as Record<string, unknown>)[key];
                   else (config as Record<string, unknown>)[key] = type === 'number' ? Number(raw) : raw;
                 })}
-            ></ha-textfield>`
+            ></ha-input>`
       }
     </label>`;
   }
@@ -273,7 +276,7 @@ export class BarCardEditor extends LitElement {
           : this.entityPicker()
       }
       <div class="fields">
-        ${this.field('Name', 'name')}${this.field('Icon', 'icon', 'text', [], 'Example: mdi:lightning-bolt')}
+        ${this.field('Name', 'name')}${this.iconField()}
         ${this.colorField()} ${this.field('Shape', 'shape', 'select', ['theme', 'square'])}
         ${this.field('Direction', 'direction', 'select', ['right', 'left', 'up', 'down'])}
         ${this.field('Height', 'height', 'text', [], 'Example: 40px or 180px for vertical bars')}
@@ -306,21 +309,24 @@ export class BarCardEditor extends LitElement {
     return html`<label class="field"
       ><span>${this.t(key[0].toUpperCase() + key.slice(1))}</span>
       <ha-select
+        .options=${[
+          {
+            value: '',
+            label: this.selected !== -1 ? this.t('Inherited') : `${this.t('Default')} (${this.t(DEFAULT_POSITIONS[key])})`,
+          },
+          ...['inside', 'outside', 'off'].map((option) => ({ value: option, label: this.t(option) })),
+        ]}
         .value=${String(current ?? '')}
-        @selected=${(e: Event) =>
+        @selected=${(e: CustomEvent<{ value?: string }>) =>
           this.edit((_config, scope) => {
             const positions = { ...scope.positions };
-            const value = (e.target as HTMLSelectElement).value;
+            const value = e.detail.value ?? '';
             if (value) positions[key] = value as 'inside' | 'outside' | 'off';
             else delete positions[key];
             scope.positions = positions;
           })}
       >
-        <ha-list-item value="">
-          ${this.selected !== -1 ? this.t('Inherited') : `${this.t('Default')} (${this.t(DEFAULT_POSITIONS[key])})`}
-        </ha-list-item>
-        ${['inside', 'outside', 'off'].map((option) => html`<ha-list-item value=${option}>${this.t(option)}</ha-list-item>`)}
-      </ha-select></label
+      ></ha-select></label
     >`;
   }
 
@@ -330,20 +336,33 @@ export class BarCardEditor extends LitElement {
     return html`<label class="field"
       ><span>${this.t('Color')}</span
       ><span class="color-control">
-        <ha-textfield
+        <ha-input
           type="color"
           .value=${pickerColor}
           aria-label=${this.t('Choose color')}
           @change=${(e: Event) => this.change('color', (e.target as HTMLInputElement).value)}
-        ></ha-textfield>
-        <ha-textfield
+        ></ha-input>
+        <ha-input
           type="text"
           .value=${color}
           placeholder=${this.t('Theme color or CSS value')}
           @change=${(e: Event) => this.change('color', (e.target as HTMLInputElement).value)}
-        ></ha-textfield> </span
+        ></ha-input> </span
       ><small>${this.t('Choose a color or enter a theme variable.')}</small></label
     >`;
+  }
+
+  private iconField(): TemplateResult {
+    const icon = this.scope().icon ?? '';
+    return html`<label class="field"
+      ><span>${this.t('Icon')}</span>
+      <ha-icon-picker
+        .value=${icon}
+        .placeholder=${this.t('Example: mdi:lightning-bolt')}
+        @value-changed=${(e: CustomEvent<{ value?: string }>) => this.change('icon', e.detail.value ?? '')}
+      ></ha-icon-picker>
+      <small>${this.t('Choose an icon from Home Assistant’s icon picker.')}</small>
+    </label>`;
   }
 
   private renderValues(): TemplateResult {
@@ -378,27 +397,27 @@ export class BarCardEditor extends LitElement {
         <label class="field"
           ><span>${this.t('Animation mode')}</span>
           <ha-select
+            .options=${[
+              { value: '', label: this.selected === -1 ? this.t('Default (change)') : this.t('Inherited') },
+              ...['change', 'pulse', 'both'].map((item) => ({ value: item, label: this.t(item) })),
+            ]}
             .value=${String(animation.mode ?? '')}
-            @selected=${(e: Event) =>
+            @selected=${(e: CustomEvent<{ value?: string }>) =>
               this.edit((_config, scope) => {
-                const value = (e.target as HTMLSelectElement).value;
+                const value = e.detail.value ?? '';
                 scope.animation = {
                   ...scope.animation,
                   mode: (value || undefined) as 'change' | 'pulse' | 'both' | undefined,
                 };
               })}
           >
-            <ha-list-item value="">
-              ${this.selected === -1 ? this.t('Default (change)') : this.t('Inherited')}
-            </ha-list-item>
-            ${['change', 'pulse', 'both'].map((item) => html`<ha-list-item value=${item}>${this.t(item)}</ha-list-item>`)}
-          </ha-select></label
+          ></ha-select></label
         >
         ${
           mode === 'change' || mode === 'both'
             ? html`<label class="field"
                 ><span>${this.t('Change duration in seconds')}</span>
-                <ha-textfield
+                <ha-input
                   type="number"
                   min="0.1"
                   max="5"
@@ -410,14 +429,14 @@ export class BarCardEditor extends LitElement {
                       const value = (e.target as HTMLInputElement).value;
                       scope.animation = { ...scope.animation, duration: value ? Number(value) : undefined };
                     })}
-                ></ha-textfield></label>`
+                ></ha-input></label>`
             : nothing
         }
         ${
           mode === 'pulse' || mode === 'both'
             ? html`<label class="field"
                 ><span>${this.t('Pulse speed in seconds')}</span>
-                <ha-textfield
+                <ha-input
                   type="number"
                   min="0.2"
                   step="0.1"
@@ -428,7 +447,7 @@ export class BarCardEditor extends LitElement {
                       const value = (e.target as HTMLInputElement).value;
                       scope.animation = { ...scope.animation, speed: value ? Number(value) : undefined };
                     })}
-                ></ha-textfield></label>`
+                ></ha-input></label>`
             : nothing
         }
       </div>
@@ -505,8 +524,8 @@ export class BarCardEditor extends LitElement {
                 scope.severity = rules;
               })}
           ></ha-switch>`
-        : html`<ha-textfield
-            type=${type}
+        : html`<ha-input
+            .type=${type === 'number' ? 'number' : 'text'}
             .value=${String(rule[key] ?? '')}
             @change=${(e: Event) =>
           this.edit((_config, scope) => {
@@ -518,7 +537,7 @@ export class BarCardEditor extends LitElement {
             rules[index] = updated;
             scope.severity = rules;
           })}
-          ></ha-textfield>`}</label>`;
+          ></ha-input>`}</label>`;
   }
 
   private renderActions(): TemplateResult {
@@ -538,8 +557,8 @@ export class BarCardEditor extends LitElement {
     const actionField = (name: string, property: string, type = 'text') =>
       html`<label class="field"
         ><span>${this.t(name)}</span>
-        <ha-textfield
-          type=${type}
+        <ha-input
+          .type=${type === 'number' ? 'number' : 'text'}
           .value=${String(action?.[property] ?? '')}
           @change=${(e: Event) =>
             this.edit((_config, scope) => {
@@ -549,7 +568,7 @@ export class BarCardEditor extends LitElement {
               else delete current[property];
               scope[key] = current;
             })}
-        ></ha-textfield></label>`;
+        ></ha-input></label>`;
     const target = action?.target as Record<string, unknown> | undefined;
     const legacyData = action?.service_data as Record<string, unknown> | undefined;
     const targetEntity = String(target?.entity_id ?? legacyData?.entity_id ?? '');
@@ -559,16 +578,18 @@ export class BarCardEditor extends LitElement {
         <label class="field"
           ><span>${this.t('Action')}</span
           ><ha-select
+            .options=${['', 'more-info', 'toggle', 'navigate', 'url', 'perform-action', 'call-service', 'assist', 'none'].map((item) => ({
+              value: item,
+              label: item || this.t('Default / inherit'),
+            }))}
             .value=${kind}
-            @selected=${(e: Event) =>
+            @selected=${(e: CustomEvent<{ value?: string }>) =>
               this.edit((_config, scope) => {
-                const value = (e.target as HTMLSelectElement).value;
+                const value = e.detail.value ?? '';
                 if (value) scope[key] = { action: value };
                 else delete scope[key];
               })}
-          >
-            ${['', 'more-info', 'toggle', 'navigate', 'url', 'perform-action', 'call-service', 'assist', 'none'].map((item) => html`<ha-list-item value=${item}>${item || this.t('Default / inherit')}</ha-list-item>`)}
-          </ha-select></label
+          ></ha-select></label
         >
         ${kind === 'navigate' ? actionField('Navigation path', 'navigation_path') : nothing}
         ${kind === 'url' ? actionField('URL', 'url_path') : nothing}
@@ -577,7 +598,7 @@ export class BarCardEditor extends LitElement {
             ? html` ${actionField('Service / action', kind === 'perform-action' ? 'perform_action' : 'service')}
                 <label class="field"
                   ><span>${this.t('Target entity ID')}</span
-                  ><ha-textfield
+                  ><ha-input
                     type="text"
                     .value=${targetEntity}
                     @change=${(e: Event) =>
@@ -596,7 +617,7 @@ export class BarCardEditor extends LitElement {
                           };
                         scope[key] = current;
                       })}
-                  ></ha-textfield></label>`
+                  ></ha-input></label>`
             : nothing
         }
         ${kind === 'more-info' || kind === 'toggle' || kind === 'assist' ? actionField('Entity ID (optional)', 'entity') : nothing}
@@ -654,8 +675,7 @@ export class BarCardEditor extends LitElement {
         kind === 'perform-action' || kind === 'call-service'
           ? html`<label class="field full"
               ><span>${this.t('Action data (JSON object)')}</span>
-              <ha-textfield
-                multiline
+              <ha-textarea
                 rows="3"
                 .value=${JSON.stringify(action?.data ?? action?.service_data ?? {}, null, 2)}
                 @change=${(e: Event) => {
@@ -673,7 +693,7 @@ export class BarCardEditor extends LitElement {
                     this.error = this.t('Action data must be a valid JSON object.');
                   }
                 }}
-              ></ha-textfield>
+              ></ha-textarea>
             </label>`
           : nothing
       }
@@ -826,8 +846,10 @@ export class BarCardEditor extends LitElement {
       background: var(--secondary-background-color, #eee);
     }
     button:focus-visible,
-    ha-textfield:focus-visible,
+    ha-input:focus-visible,
     ha-select:focus-visible,
+    ha-icon-picker:focus-visible,
+    ha-textarea:focus-visible,
     ha-switch:focus-visible {
       outline: 2px solid var(--primary-color);
       outline-offset: 2px;
@@ -885,21 +907,22 @@ export class BarCardEditor extends LitElement {
       font-size: 0.74rem;
       font-weight: 400;
     }
-    ha-textfield,
+    ha-input,
     ha-select {
       display: block;
       width: 100%;
-      --mdc-text-field-fill-color: var(--card-background-color, #fff);
-      --mdc-text-field-idle-line-color: var(--divider-color, #bbb);
-      --mdc-text-field-hover-line-color: var(--primary-color);
-      --mdc-select-fill-color: var(--card-background-color, #fff);
+    }
+    ha-icon-picker,
+    ha-textarea {
+      display: block;
+      width: 100%;
     }
     .color-control {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .color-control ha-textfield[type='color'] {
+    .color-control ha-input[type='color'] {
       width: 44px;
       min-width: 44px;
       height: 40px;
