@@ -1,6 +1,6 @@
 {
   "name": "bar-card-next",
-  "version": "4.0.4",
+  "version": "4.0.5",
   "private": true,
   "type": "module",
   "description": "Configurable bar card for Home Assistant",
