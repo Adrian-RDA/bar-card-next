@@ -599,7 +599,7 @@ var Te = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, Oe = "important", ke = " !" + Oe, Ae = Ee(class extends De {
+}, Oe = "important", ke = " !" + Oe, q = Ee(class extends De {
 	constructor(e) {
 		if (super(e), e.type !== Te.ATTRIBUTE || e.name !== "style" || e.strings?.length > 2) throw Error("The `styleMap` directive must be used in the `style` attribute and must be the only part in the attribute.");
 	}
@@ -623,7 +623,7 @@ var Te = {
 		}
 		return I;
 	}
-}), { I: je } = ve, Me = {}, Ne = (e, t = Me) => e._$AH = t, Pe = Ee(class extends De {
+}), { I: Ae } = ve, je = {}, Me = (e, t = je) => e._$AH = t, Ne = Ee(class extends De {
 	constructor() {
 		super(...arguments), this.key = L;
 	}
@@ -631,9 +631,9 @@ var Te = {
 		return this.key = e, t;
 	}
 	update(e, [t, n]) {
-		return t !== this.key && (Ne(e), this.key = t), n;
+		return t !== this.key && (Me(e), this.key = t), n;
 	}
-}), q = {
+}), Pe = {
 	icon: "outside",
 	indicator: "outside",
 	name: "inside",
@@ -687,7 +687,7 @@ function Ie(e, t) {
 			max: Number(s.max ?? J.max),
 			direction: s.direction || J.direction,
 			positions: {
-				...q,
+				...Pe,
 				...c.positions,
 				...o.positions,
 				...r.positions
@@ -735,7 +735,7 @@ var Ve = o`
   ha-card {
     display: block;
     background: var(--ha-card-background, var(--card-background-color, var(--ha-color-surface-default, #fff)));
-    border-radius: var(--ha-card-border-radius, 12px);
+    border-radius: var(--bar-card-border-radius, var(--ha-card-border-radius, 12px));
     box-shadow: var(--ha-card-box-shadow, var(--ha-box-shadow-s, 0 2px 8px #0002));
     overflow: hidden;
   }
@@ -972,7 +972,7 @@ var Ve = o`
       display: none;
     }
   }
-`, He = {
+`, He = { de: {
 	Entities: "Entitäten",
 	Appearance: "Darstellung",
 	Values: "Werte",
@@ -990,7 +990,7 @@ var Ve = o`
 	"Editor sections": "Editorbereiche",
 	"Choose an entity": "Entität auswählen",
 	"Selected entity": "Ausgewählte Entität",
-	"Start typing an entity ID and choose from the suggestions.": "Entitäts-ID eingeben und aus den Vorschlägen wählen.",
+	"Choose an entity using Home Assistant’s entity picker.": "Entität mit dem nativen Home-Assistant-Entitätsauswahlfeld auswählen.",
 	"Layout, color, and visible labels.": "Layout, Farbe und sichtbare Beschriftungen.",
 	"Card title": "Kartentitel",
 	Columns: "Spalten",
@@ -1004,7 +1004,11 @@ var Ve = o`
 	Direction: "Richtung",
 	Height: "Höhe",
 	Width: "Breite",
-	"Entity row": "Entitätenzeile",
+	"Use in an entities card": "In einer Entitätenkarte verwenden",
+	"Removes the card background and outer spacing.": "Entfernt Kartenhintergrund und äußeren Abstand.",
+	"Border radius": "Eckenradius",
+	"Example: 12px; empty uses the Home Assistant theme.": "Beispiel: 12px; leer verwendet das Home-Assistant-Theme.",
+	Bar: "Balken",
 	"Use entity attributes as options": "Entitätsattribute als Optionen verwenden",
 	"Element positions": "Positionen der Elemente",
 	Indicator: "Indikator",
@@ -1077,9 +1081,9 @@ var Ve = o`
 	"Example: 100% or 240px": "Beispiel: 100% oder 240px",
 	"Leave blank for entity state": "Leer lassen für den Entitätszustand",
 	"Zero is a valid target": "Null ist ein gültiger Zielwert"
-};
+} };
 function X(e, t) {
-	return e?.toLowerCase().startsWith("de") ? He[t] ?? t : t;
+	return He[e?.toLowerCase().split(/[-_]/)[0] ?? ""]?.[t] ?? t;
 }
 //#endregion
 //#region \0@oxc-project+runtime@0.151.0/helpers/esm/decorate.js
@@ -1114,6 +1118,10 @@ var Q = class extends W {
 		if (this.selected === -1) return this.config ?? {};
 		let e = this.entries()[this.selected];
 		return typeof e == "string" ? { entity: e } : e ?? {};
+	}
+	selectedLabel() {
+		let e = this.scope().entity ?? "";
+		return this.hass?.states[e]?.attributes.friendly_name || e || `Bar ${this.selected + 1}`;
 	}
 	edit(e) {
 		let t = this.normalized();
@@ -1151,25 +1159,24 @@ var Q = class extends W {
 		let a = this.scope()[t], o = this.selected !== -1 && a === void 0, s = o ? `${this.t("Inherited")}: ${String(this.config?.[t] ?? "default")}` : "";
 		return F`<label class="field">
       <span>${this.t(e)}</span>
-      ${n === "checkbox" ? F`<input
-              type="checkbox"
+      ${n === "checkbox" ? F`<ha-switch
               .checked=${!!(a ?? this.config?.[t])}
               @change=${(e) => this.change(t, e.target.checked)}
-            />` : n === "select" ? F`<select
+            ></ha-switch>` : n === "select" ? F`<ha-select
                 .value=${String(a ?? "")}
-                @change=${(e) => this.change(t, e.target.value)}
+                @selected=${(e) => this.change(t, e.target.value)}
               >
-                ${o ? F`<option value="">${this.t("Inherited")}</option>` : L}
-                ${r.map((e) => F`<option value=${e}>${this.t(e)}</option>`)}
-              </select>` : F`<input
+                ${o ? F`<ha-list-item value="">${this.t("Inherited")}</ha-list-item>` : L}
+                ${r.map((e) => F`<ha-list-item value=${e}>${this.t(e)}</ha-list-item>`)}
+              </ha-select>` : F`<ha-textfield
                 type=${n}
                 .value=${a === void 0 ? "" : String(a)}
-                placeholder=${s}
+                placeholder=${s || L}
                 @change=${(e) => {
 			let r = e.target.value;
 			this.change(t, n === "number" && r !== "" ? Number(r) : r);
 		}}
-              />`}
+              ></ha-textfield>`}
       ${i ? F`<small>${this.t(i)}</small>` : L}
     </label>`;
 	}
@@ -1177,21 +1184,21 @@ var Q = class extends W {
 		let i = this.config?.[t];
 		return F`<label class="field"
       ><span>${this.t(e)}</span>
-      ${n === "select" ? F`<select
+      ${n === "select" ? F`<ha-select
               .value=${String(i ?? "")}
-              @change=${(e) => this.edit((n) => {
+              @selected=${(e) => this.edit((n) => {
 			n[t] = e.target.value;
 		})}
             >
-              ${r.map((e) => F`<option value=${e}>${e ? this.t(e) : this.t("Automatic")}</option>`)}
-            </select>` : F`<input
+              ${r.map((e) => F`<ha-list-item value=${e}>${e ? this.t(e) : this.t("Automatic")}</ha-list-item>`)}
+            </ha-select>` : F`<ha-textfield
               type=${n}
               .value=${i === void 0 ? "" : String(i)}
               @change=${(e) => this.edit((r) => {
 			let i = e.target.value;
 			i ? r[t] = n === "number" ? Number(i) : i : delete r[t];
 		})}
-            />`}
+            ></ha-textfield>`}
     </label>`;
 	}
 	renderEntities() {
@@ -1215,10 +1222,13 @@ var Q = class extends W {
 				this.selected = n, this.tab = "appearance";
 			}}
             >
-              <span class="entity-name"
-                >${this.hass?.states[r]?.attributes.friendly_name || r || this.t("Choose an entity")}</span
-              >
-              <small>${r}</small>
+              <span class="entity-index" aria-hidden="true">${n + 1}</span>
+              <span class="entity-copy">
+                <span class="entity-name"
+                  >${this.hass?.states[r]?.attributes.friendly_name || r || this.t("Choose an entity")}</span
+                >
+                <small>${r}</small>
+              </span>
             </button>
             <div class="row-actions">
               <button
@@ -1257,16 +1267,13 @@ var Q = class extends W {
 		let e = this.scope().entity ?? "";
 		return F`<label class="field"
       ><span>${this.t("Selected entity")}</span>
-      <input
-        list="bar-entities"
+      <ha-entity-picker
+        .hass=${this.hass}
         .value=${e}
-        placeholder="sensor.example"
-        @change=${(e) => this.change("entity", e.target.value)}
-      />
-      <datalist id="bar-entities">
-        ${Object.keys(this.hass?.states ?? {}).map((e) => F`<option value=${e}></option>`)}
-      </datalist>
-      <small>${this.t("Start typing an entity ID and choose from the suggestions.")}</small>
+        allow-custom-entity
+        @value-changed=${(e) => this.change("entity", e.detail.value ?? "")}
+      ></ha-entity-picker>
+      <small>${this.t("Choose an entity using Home Assistant’s entity picker.")}</small>
     </label>`;
 	}
 	renderAppearance() {
@@ -1288,12 +1295,13 @@ var Q = class extends W {
 		])}
         ${this.field("Height", "height", "text", [], "Example: 40px or 180px for vertical bars")}
         ${this.field("Width", "width", "text", [], "Example: 100% or 240px")}
-        ${this.field("Entity row", "entity_row", "checkbox")}
+        ${this.field("Use in an entities card", "entity_row", "checkbox", [], "Removes the card background and outer spacing.")}
+        ${this.field("Border radius", "border_radius", "text", [], "Example: 12px; empty uses the Home Assistant theme.")}
         ${this.field("Use entity attributes as options", "entity_config", "checkbox")}
       </div>
       <h4>${this.t("Element positions")}</h4>
       <div class="fields">
-        ${Object.keys(q).map((e) => this.positionField(e))}
+        ${Object.keys(Pe).map((e) => this.positionField(e))}
       </div>
     </section>`;
 	}
@@ -1301,22 +1309,22 @@ var Q = class extends W {
 		let t = this.scope().positions?.[e];
 		return F`<label class="field"
       ><span>${this.t(e[0].toUpperCase() + e.slice(1))}</span>
-      <select
+      <ha-select
         .value=${String(t ?? "")}
-        @change=${(t) => this.edit((n, r) => {
+        @selected=${(t) => this.edit((n, r) => {
 			let i = { ...r.positions }, a = t.target.value;
 			a ? i[e] = a : delete i[e], r.positions = i;
 		})}
       >
-        <option value="">
-          ${this.selected === -1 ? `${this.t("Default")} (${this.t(q[e])})` : this.t("Inherited")}
-        </option>
+        <ha-list-item value="">
+          ${this.selected === -1 ? `${this.t("Default")} (${this.t(Pe[e])})` : this.t("Inherited")}
+        </ha-list-item>
         ${[
 			"inside",
 			"outside",
 			"off"
-		].map((e) => F`<option value=${e}>${this.t(e)}</option>`)}
-      </select></label
+		].map((e) => F`<ha-list-item value=${e}>${this.t(e)}</ha-list-item>`)}
+      </ha-select></label
     >`;
 	}
 	colorField() {
@@ -1324,18 +1332,18 @@ var Q = class extends W {
 		return F`<label class="field"
       ><span>${this.t("Color")}</span
       ><span class="color-control">
-        <input
+        <ha-textfield
           type="color"
           .value=${t}
           aria-label=${this.t("Choose color")}
           @change=${(e) => this.change("color", e.target.value)}
-        />
-        <input
+        ></ha-textfield>
+        <ha-textfield
           type="text"
           .value=${e}
           placeholder=${this.t("Theme color or CSS value")}
           @change=${(e) => this.change("color", e.target.value)}
-        /> </span
+        ></ha-textfield> </span
       ><small>${this.t("Choose a color or enter a theme variable.")}</small></label
     >`;
 	}
@@ -1356,8 +1364,7 @@ var Q = class extends W {
       <div class="fields">
         <label class="field"
           ><span>${this.t("Animated bar")}</span
-          ><input
-            type="checkbox"
+          ><ha-switch
             .checked=${n}
             @change=${(e) => this.edit((t, n) => {
 			n.animation = {
@@ -1365,12 +1372,12 @@ var Q = class extends W {
 				state: e.target.checked ? "on" : "off"
 			};
 		})}
-        /></label>
+        ></ha-switch></label>
         <label class="field"
           ><span>${this.t("Animation mode")}</span>
-          <select
+          <ha-select
             .value=${String(e.mode ?? "")}
-            @change=${(e) => this.edit((t, n) => {
+            @selected=${(e) => this.edit((t, n) => {
 			let r = e.target.value;
 			n.animation = {
 				...n.animation,
@@ -1378,19 +1385,19 @@ var Q = class extends W {
 			};
 		})}
           >
-            <option value="">
+            <ha-list-item value="">
               ${this.selected === -1 ? this.t("Default (change)") : this.t("Inherited")}
-            </option>
+            </ha-list-item>
             ${[
 			"change",
 			"pulse",
 			"both"
-		].map((e) => F`<option value=${e}>${this.t(e)}</option>`)}
-          </select></label
+		].map((e) => F`<ha-list-item value=${e}>${this.t(e)}</ha-list-item>`)}
+          </ha-select></label
         >
         ${t === "change" || t === "both" ? F`<label class="field"
                 ><span>${this.t("Change duration in seconds")}</span>
-                <input
+                <ha-textfield
                   type="number"
                   min="0.1"
                   max="5"
@@ -1404,10 +1411,10 @@ var Q = class extends W {
 				duration: r ? Number(r) : void 0
 			};
 		})}
-              /></label>` : L}
+                ></ha-textfield></label>` : L}
         ${t === "pulse" || t === "both" ? F`<label class="field"
                 ><span>${this.t("Pulse speed in seconds")}</span>
-                <input
+                <ha-textfield
                   type="number"
                   min="0.2"
                   step="0.1"
@@ -1420,7 +1427,7 @@ var Q = class extends W {
 				speed: r ? Number(r) : void 0
 			};
 		})}
-              /></label>` : L}
+                ></ha-textfield></label>` : L}
       </div>
     </section>`;
 	}
@@ -1472,15 +1479,23 @@ var Q = class extends W {
 	ruleField(e, t, n, r, i = "text") {
 		return F`<label class="field"
       ><span>${this.t(r)}</span>
-      <input
-        type=${i}
-        .checked=${i === "checkbox" && !!t[n]}
-        .value=${i === "checkbox" ? "" : String(t[n] ?? "")}
-        @change=${(t) => this.edit((r, a) => {
+      ${i === "checkbox" ? F`<ha-switch
+            .checked=${!!t[n]}
+            @change=${(t) => this.edit((r, i) => {
+			let a = [...i.severity ?? []];
+			a[e] = {
+				...a[e],
+				[n]: t.target.checked
+			}, i.severity = a;
+		})}
+          ></ha-switch>` : F`<ha-textfield
+            type=${i}
+            .value=${String(t[n] ?? "")}
+            @change=${(t) => this.edit((r, a) => {
 			let o = [...a.severity ?? []], s = i === "checkbox" ? t.target.checked : t.target.value, c = { ...o[e] };
 			s === "" ? delete c[n] : c[n] = i === "number" ? Number(s) : s, o[e] = c, a.severity = o;
 		})}
-    /></label>`;
+          ></ha-textfield>`}</label>`;
 	}
 	renderActions() {
 		return F`<section class="panel">
@@ -1492,22 +1507,22 @@ var Q = class extends W {
 	actionEditor(e, t) {
 		let n = this.scope()[e], r = n?.action ?? "", i = (t, i, a = "text") => F`<label class="field"
         ><span>${this.t(t)}</span>
-        <input
+        <ha-textfield
           type=${a}
           .value=${String(n?.[i] ?? "")}
           @change=${(t) => this.edit((n, a) => {
 			let o = { ...a[e] ?? { action: r } }, s = t.target.value;
 			s ? o[i] = s : delete o[i], a[e] = o;
 		})}
-      /></label>`, a = n?.target, o = n?.service_data, s = String(a?.entity_id ?? o?.entity_id ?? "");
+        ></ha-textfield></label>`, a = n?.target, o = n?.service_data, s = String(a?.entity_id ?? o?.entity_id ?? "");
 		return F`<div class="action-block">
       <h4>${this.t(t)}</h4>
       <div class="fields">
         <label class="field"
           ><span>${this.t("Action")}</span
-          ><select
+          ><ha-select
             .value=${r}
-            @change=${(t) => this.edit((n, r) => {
+            @selected=${(t) => this.edit((n, r) => {
 			let i = t.target.value;
 			i ? r[e] = { action: i } : delete r[e];
 		})}
@@ -1522,15 +1537,15 @@ var Q = class extends W {
 			"call-service",
 			"assist",
 			"none"
-		].map((e) => F`<option value=${e}>${e || this.t("Default / inherit")}</option>`)}
-          </select></label
+		].map((e) => F`<ha-list-item value=${e}>${e || this.t("Default / inherit")}</ha-list-item>`)}
+          </ha-select></label
         >
         ${r === "navigate" ? i("Navigation path", "navigation_path") : L}
         ${r === "url" ? i("URL", "url_path") : L}
         ${r === "perform-action" || r === "call-service" ? F` ${i("Service / action", r === "perform-action" ? "perform_action" : "service")}
                 <label class="field"
                   ><span>${this.t("Target entity ID")}</span
-                  ><input
+                  ><ha-textfield
                     type="text"
                     .value=${s}
                     @change=${(t) => this.edit((n, i) => {
@@ -1543,12 +1558,11 @@ var Q = class extends W {
 				entity_id: o
 			}, i[e] = a;
 		})}
-                /></label>` : L}
+                  ></ha-textfield></label>` : L}
         ${r === "more-info" || r === "toggle" || r === "assist" ? i("Entity ID (optional)", "entity") : L}
         ${r === "navigate" ? F`<label class="field"
                 ><span>${this.t("Replace browser history")}</span
-                ><input
-                  type="checkbox"
+                ><ha-switch
                   .checked=${!!n?.navigation_replace}
                   @change=${(t) => this.edit((n, i) => {
 			i[e] = {
@@ -1556,11 +1570,10 @@ var Q = class extends W {
 				navigation_replace: t.target.checked
 			};
 		})}
-              /></label>` : L}
+                ></ha-switch></label>` : L}
         ${r === "assist" ? F`<label class="field"
                 ><span>${this.t("Start listening")}</span
-                ><input
-                  type="checkbox"
+                ><ha-switch
                   .checked=${!!n?.start_listening}
                   @change=${(t) => this.edit((n, i) => {
 			i[e] = {
@@ -1568,12 +1581,11 @@ var Q = class extends W {
 				start_listening: t.target.checked
 			};
 		})}
-              /></label>` : L}
+                ></ha-switch></label>` : L}
         ${r === "assist" ? i("Pipeline ID (optional)", "pipeline_id") : L}
         ${r ? F`<label class="field"
                 ><span>${this.t("Ask for confirmation")}</span
-                ><input
-                  type="checkbox"
+                ><ha-switch
                   .checked=${!!n?.confirmation}
                   @change=${(t) => this.edit((n, i) => {
 			i[e] = {
@@ -1581,11 +1593,12 @@ var Q = class extends W {
 				confirmation: t.target.checked
 			};
 		})}
-              /></label>` : L}
+                ></ha-switch></label>` : L}
       </div>
       ${r === "perform-action" || r === "call-service" ? F`<label class="field full"
               ><span>${this.t("Action data (JSON object)")}</span>
-              <textarea
+              <ha-textfield
+                multiline
                 rows="3"
                 .value=${JSON.stringify(n?.data ?? n?.service_data ?? {}, null, 2)}
                 @change=${(t) => {
@@ -1602,7 +1615,7 @@ var Q = class extends W {
 				this.error = this.t("Action data must be a valid JSON object.");
 			}
 		}}
-              ></textarea>
+              ></ha-textfield>
             </label>` : L}
     </div>`;
 	}
@@ -1615,7 +1628,7 @@ var Q = class extends W {
         </div>
         <span class="scope"
           >${this.t("Editing:")}
-          ${this.selected === -1 ? this.t("All bars") : this.scope().entity || `Bar ${this.selected + 1}`}</span
+          ${this.selected === -1 ? this.t("All bars") : this.selectedLabel()}</span
         >
       </header>
       <div class="scope-switch">
@@ -1631,11 +1644,12 @@ var Q = class extends W {
         ${this.entries().map((e, t) => F`<button
               type="button"
               class=${this.selected === t ? "active" : ""}
+              aria-label=${`${this.t("Bar")} ${t + 1}`}
               @click=${() => {
 			this.selected = t;
 		}}
             >
-              ${typeof e == "string" ? e : e.name || e.entity || `Bar ${t + 1}`}
+              ${t + 1}
             </button>`)}
       </div>
       <nav aria-label=${this.t("Editor sections")}>
@@ -1743,9 +1757,9 @@ var Q = class extends W {
       background: var(--secondary-background-color, #eee);
     }
     button:focus-visible,
-    input:focus-visible,
-    select:focus-visible,
-    textarea:focus-visible {
+    ha-textfield:focus-visible,
+    ha-select:focus-visible,
+    ha-switch:focus-visible {
       outline: 2px solid var(--primary-color);
       outline-offset: 2px;
     }
@@ -1802,34 +1816,24 @@ var Q = class extends W {
       font-size: 0.74rem;
       font-weight: 400;
     }
-    input:not([type='checkbox']),
-    select,
-    textarea {
+    ha-textfield,
+    ha-select {
+      display: block;
       width: 100%;
-      min-height: 40px;
-      padding: 8px 10px;
-      border: 1px solid var(--divider-color, #bbb);
-      border-radius: 8px;
-      background: var(--card-background-color, #fff);
-      color: var(--primary-text-color);
-      font: inherit;
-      font-weight: 400;
-    }
-    input[type='checkbox'] {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--primary-color);
+      --mdc-text-field-fill-color: var(--card-background-color, #fff);
+      --mdc-text-field-idle-line-color: var(--divider-color, #bbb);
+      --mdc-text-field-hover-line-color: var(--primary-color);
+      --mdc-select-fill-color: var(--card-background-color, #fff);
     }
     .color-control {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .color-control input[type='color'] {
+    .color-control ha-textfield[type='color'] {
       width: 44px;
       min-width: 44px;
       height: 40px;
-      padding: 3px;
       cursor: pointer;
     }
     .full {
@@ -1852,10 +1856,28 @@ var Q = class extends W {
     .entity-select {
       flex: 1;
       display: flex;
-      flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
+      gap: 10px;
       min-width: 0;
       text-align: left;
+    }
+    .entity-copy {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .entity-index {
+      flex: none;
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      margin: 0 0 0 8px;
+      border-radius: 50%;
+      background: var(--secondary-background-color, #eee);
+      color: var(--primary-color);
+      font-size: 0.78rem;
+      font-weight: 700;
     }
     .entity-select small,
     .entity-name {
@@ -1947,11 +1969,14 @@ var Ue = "4.0.0", $ = class extends W {
 	}
 	render() {
 		if (!this.config || !this.hass) return F``;
-		let e = Ie(this.config, this.hass.states), t = this.config.stack === "horizontal" ? e.length : Math.max(1, Number(this.config.columns ?? 1)), n = this.config.entity_row;
+		let e = Ie(this.config, this.hass.states), t = this.config.stack === "horizontal" ? e.length : Math.max(1, Number(this.config.columns ?? 1)), n = this.config.entity_row, r = q({ "--bar-card-border-radius": this.config.border_radius === void 0 ? void 0 : `${this.config.border_radius}${typeof this.config.border_radius == "number" ? "px" : ""}` });
 		return F`
-      <ha-card class=${`${n ? "entity-row" : ""} ${this.config.shape === "square" ? "square" : ""}`}>
+      <ha-card
+        class=${`${n ? "entity-row" : ""} ${this.config.shape === "square" ? "square" : ""}`}
+        style=${r}
+      >
         ${this.config.title && !n ? F`<div class="card-title">${this.config.title}</div>` : L}
-        <div id="states" class="bars" style=${Ae({ "--columns": String(t) })}>
+        <div id="states" class="bars" style=${q({ "--columns": String(t) })}>
           ${e.map((e, t) => this.renderBar(e, t))}
         </div>
       </ha-card>
@@ -1981,12 +2006,13 @@ var Ue = "4.0.0", $ = class extends W {
           class="indicator"
           aria-label=${X(this.hass?.locale?.language ?? this.hass?.language, h === "▲" ? "Increasing" : "Decreasing")}
           >${h}</span
-        >` : L, w = Ae({
+        >` : L, w = q({
 			"--bar-color": l,
 			"--bar-progress": `${s}%`,
 			"--bar-target": `${c ?? 0}%`,
 			"--bar-height": typeof e.height == "number" ? `${e.height}px` : e.height || "40px",
 			"--bar-width": e.width || "100%",
+			"--bar-card-border-radius": e.border_radius === void 0 ? void 0 : `${e.border_radius}${typeof e.border_radius == "number" ? "px" : ""}`,
 			"--bar-radius": e.shape === "square" ? "0px" : "var(--bar-card-border-radius, var(--ha-progress-bar-border-radius, var(--ha-card-border-radius, 12px)))",
 			"--animation-speed": `${Math.max(.2, Number(e.animation.speed) || 5)}s`,
 			"--change-duration": `${Math.max(.1, Math.min(5, Number(e.animation.duration) || .7))}s`
@@ -2020,7 +2046,7 @@ var Ue = "4.0.0", $ = class extends W {
         >
           <bar-card-backgroundbar></bar-card-backgroundbar>
           <bar-card-currentbar class=${v ? "animated" : ""}></bar-card-currentbar>
-          ${m && ee ? Pe(`${t}-${this.changeVersion.get(t)}`, F`<bar-card-change></bar-card-change>`) : L}
+          ${m && ee ? Ne(`${t}-${this.changeVersion.get(t)}`, F`<bar-card-change></bar-card-change>`) : L}
           ${c === void 0 ? L : F`<bar-card-markerbar></bar-card-markerbar>`}
           <bar-card-contentbar>
             ${e.positions.icon === "inside" ? S : L}
