@@ -991,6 +991,7 @@ var Ve = o`
 	"Choose an entity": "Entität auswählen",
 	"Selected entity": "Ausgewählte Entität",
 	"Choose an entity using Home Assistant’s entity picker.": "Entität mit dem nativen Home-Assistant-Entitätsauswahlfeld auswählen.",
+	"Choose an icon from Home Assistant’s icon picker.": "Icon mit dem nativen Home-Assistant-Icon-Picker auswählen.",
 	"Layout, color, and visible labels.": "Layout, Farbe und sichtbare Beschriftungen.",
 	"Card title": "Kartentitel",
 	Columns: "Spalten",
@@ -1065,14 +1066,14 @@ var Ve = o`
 	"Action data must be a valid JSON object.": "Aktionsdaten müssen ein gültiges JSON-Objekt sein.",
 	Inherited: "Geerbt",
 	Automatic: "Automatisch",
-	inside: "innen",
-	outside: "außen",
-	off: "aus",
-	right: "rechts",
-	left: "links",
-	up: "oben",
-	down: "unten",
-	horizontal: "horizontal",
+	inside: "Innen",
+	outside: "Außen",
+	off: "Aus",
+	right: "Rechts",
+	left: "Links",
+	up: "Oben",
+	down: "Unten",
+	horizontal: "Horizontal",
 	"Entity not available": "Entität nicht verfügbar",
 	Increasing: "Steigend",
 	Decreasing: "Fallend",
@@ -1163,20 +1164,24 @@ var Q = class extends W {
               .checked=${!!(a ?? this.config?.[t])}
               @change=${(e) => this.change(t, e.target.checked)}
             ></ha-switch>` : n === "select" ? F`<ha-select
+                .options=${[...o ? [{
+			value: "",
+			label: this.t("Inherited")
+		}] : [], ...r.map((e) => ({
+			value: e,
+			label: this.t(e)
+		}))]}
                 .value=${String(a ?? "")}
-                @selected=${(e) => this.change(t, e.target.value)}
-              >
-                ${o ? F`<ha-list-item value="">${this.t("Inherited")}</ha-list-item>` : L}
-                ${r.map((e) => F`<ha-list-item value=${e}>${this.t(e)}</ha-list-item>`)}
-              </ha-select>` : F`<ha-textfield
-                type=${n}
+                @selected=${(e) => this.change(t, e.detail.value ?? "")}
+              ></ha-select>` : F`<ha-input
+                .type=${n === "number" ? "number" : "text"}
                 .value=${a === void 0 ? "" : String(a)}
                 placeholder=${s || L}
                 @change=${(e) => {
 			let r = e.target.value;
 			this.change(t, n === "number" && r !== "" ? Number(r) : r);
 		}}
-              ></ha-textfield>`}
+              ></ha-input>`}
       ${i ? F`<small>${this.t(i)}</small>` : L}
     </label>`;
 	}
@@ -1185,20 +1190,22 @@ var Q = class extends W {
 		return F`<label class="field"
       ><span>${this.t(e)}</span>
       ${n === "select" ? F`<ha-select
+              .options=${r.map((e) => ({
+			value: e,
+			label: e ? this.t(e) : this.t("Automatic")
+		}))}
               .value=${String(i ?? "")}
               @selected=${(e) => this.edit((n) => {
-			n[t] = e.target.value;
+			n[t] = e.detail.value ?? "";
 		})}
-            >
-              ${r.map((e) => F`<ha-list-item value=${e}>${e ? this.t(e) : this.t("Automatic")}</ha-list-item>`)}
-            </ha-select>` : F`<ha-textfield
-              type=${n}
+            ></ha-select>` : F`<ha-input
+              .type=${n === "number" ? "number" : "text"}
               .value=${i === void 0 ? "" : String(i)}
               @change=${(e) => this.edit((r) => {
 			let i = e.target.value;
 			i ? r[t] = n === "number" ? Number(i) : i : delete r[t];
 		})}
-            ></ha-textfield>`}
+            ></ha-input>`}
     </label>`;
 	}
 	renderEntities() {
@@ -1285,7 +1292,7 @@ var Q = class extends W {
               ${this.globalField("Columns", "columns", "number")}${this.globalField("Stack", "stack", "select", ["", "horizontal"])}
             </div>` : this.entityPicker()}
       <div class="fields">
-        ${this.field("Name", "name")}${this.field("Icon", "icon", "text", [], "Example: mdi:lightning-bolt")}
+        ${this.field("Name", "name")}${this.iconField()}
         ${this.colorField()} ${this.field("Shape", "shape", "select", ["theme", "square"])}
         ${this.field("Direction", "direction", "select", [
 			"right",
@@ -1310,21 +1317,24 @@ var Q = class extends W {
 		return F`<label class="field"
       ><span>${this.t(e[0].toUpperCase() + e.slice(1))}</span>
       <ha-select
-        .value=${String(t ?? "")}
-        @selected=${(t) => this.edit((n, r) => {
-			let i = { ...r.positions }, a = t.target.value;
-			a ? i[e] = a : delete i[e], r.positions = i;
-		})}
-      >
-        <ha-list-item value="">
-          ${this.selected === -1 ? `${this.t("Default")} (${this.t(Pe[e])})` : this.t("Inherited")}
-        </ha-list-item>
-        ${[
+        .options=${[{
+			value: "",
+			label: this.selected === -1 ? `${this.t("Default")} (${this.t(Pe[e])})` : this.t("Inherited")
+		}, ...[
 			"inside",
 			"outside",
 			"off"
-		].map((e) => F`<ha-list-item value=${e}>${this.t(e)}</ha-list-item>`)}
-      </ha-select></label
+		].map((e) => ({
+			value: e,
+			label: this.t(e)
+		}))]}
+        .value=${String(t ?? "")}
+        @selected=${(t) => this.edit((n, r) => {
+			let i = { ...r.positions }, a = t.detail.value ?? "";
+			a ? i[e] = a : delete i[e], r.positions = i;
+		})}
+      >
+      ></ha-select></label
     >`;
 	}
 	colorField() {
@@ -1332,20 +1342,32 @@ var Q = class extends W {
 		return F`<label class="field"
       ><span>${this.t("Color")}</span
       ><span class="color-control">
-        <ha-textfield
+        <ha-input
           type="color"
           .value=${t}
           aria-label=${this.t("Choose color")}
           @change=${(e) => this.change("color", e.target.value)}
-        ></ha-textfield>
-        <ha-textfield
+        ></ha-input>
+        <ha-input
           type="text"
           .value=${e}
           placeholder=${this.t("Theme color or CSS value")}
           @change=${(e) => this.change("color", e.target.value)}
-        ></ha-textfield> </span
+        ></ha-input> </span
       ><small>${this.t("Choose a color or enter a theme variable.")}</small></label
     >`;
+	}
+	iconField() {
+		let e = this.scope().icon ?? "";
+		return F`<label class="field"
+      ><span>${this.t("Icon")}</span>
+      <ha-icon-picker
+        .value=${e}
+        .placeholder=${this.t("Example: mdi:lightning-bolt")}
+        @value-changed=${(e) => this.change("icon", e.detail.value ?? "")}
+      ></ha-icon-picker>
+      <small>${this.t("Choose an icon from Home Assistant’s icon picker.")}</small>
+    </label>`;
 	}
 	renderValues() {
 		let e = this.scope().animation ?? {}, t = e.mode ?? this.config?.animation?.mode ?? "change", n = (e.state ?? this.config?.animation?.state ?? "on") !== "off";
@@ -1376,28 +1398,31 @@ var Q = class extends W {
         <label class="field"
           ><span>${this.t("Animation mode")}</span>
           <ha-select
+            .options=${[{
+			value: "",
+			label: this.selected === -1 ? this.t("Default (change)") : this.t("Inherited")
+		}, ...[
+			"change",
+			"pulse",
+			"both"
+		].map((e) => ({
+			value: e,
+			label: this.t(e)
+		}))]}
             .value=${String(e.mode ?? "")}
             @selected=${(e) => this.edit((t, n) => {
-			let r = e.target.value;
+			let r = e.detail.value ?? "";
 			n.animation = {
 				...n.animation,
 				mode: r || void 0
 			};
 		})}
           >
-            <ha-list-item value="">
-              ${this.selected === -1 ? this.t("Default (change)") : this.t("Inherited")}
-            </ha-list-item>
-            ${[
-			"change",
-			"pulse",
-			"both"
-		].map((e) => F`<ha-list-item value=${e}>${this.t(e)}</ha-list-item>`)}
-          </ha-select></label
+          ></ha-select></label
         >
         ${t === "change" || t === "both" ? F`<label class="field"
                 ><span>${this.t("Change duration in seconds")}</span>
-                <ha-textfield
+                <ha-input
                   type="number"
                   min="0.1"
                   max="5"
@@ -1411,10 +1436,10 @@ var Q = class extends W {
 				duration: r ? Number(r) : void 0
 			};
 		})}
-                ></ha-textfield></label>` : L}
+                ></ha-input></label>` : L}
         ${t === "pulse" || t === "both" ? F`<label class="field"
                 ><span>${this.t("Pulse speed in seconds")}</span>
-                <ha-textfield
+                <ha-input
                   type="number"
                   min="0.2"
                   step="0.1"
@@ -1427,7 +1452,7 @@ var Q = class extends W {
 				speed: r ? Number(r) : void 0
 			};
 		})}
-                ></ha-textfield></label>` : L}
+                ></ha-input></label>` : L}
       </div>
     </section>`;
 	}
@@ -1488,14 +1513,14 @@ var Q = class extends W {
 				[n]: t.target.checked
 			}, i.severity = a;
 		})}
-          ></ha-switch>` : F`<ha-textfield
-            type=${i}
+          ></ha-switch>` : F`<ha-input
+            .type=${i === "number" ? "number" : "text"}
             .value=${String(t[n] ?? "")}
             @change=${(t) => this.edit((r, a) => {
 			let o = [...a.severity ?? []], s = t.target.value, c = { ...o[e] };
 			s === "" ? delete c[n] : c[n] = i === "number" ? Number(s) : s, o[e] = c, a.severity = o;
 		})}
-          ></ha-textfield>`}</label>`;
+          ></ha-input>`}</label>`;
 	}
 	renderActions() {
 		return F`<section class="panel">
@@ -1507,27 +1532,21 @@ var Q = class extends W {
 	actionEditor(e, t) {
 		let n = this.scope()[e], r = n?.action ?? "", i = (t, i, a = "text") => F`<label class="field"
         ><span>${this.t(t)}</span>
-        <ha-textfield
-          type=${a}
+        <ha-input
+          .type=${a === "number" ? "number" : "text"}
           .value=${String(n?.[i] ?? "")}
           @change=${(t) => this.edit((n, a) => {
 			let o = { ...a[e] ?? { action: r } }, s = t.target.value;
 			s ? o[i] = s : delete o[i], a[e] = o;
 		})}
-        ></ha-textfield></label>`, a = n?.target, o = n?.service_data, s = String(a?.entity_id ?? o?.entity_id ?? "");
+        ></ha-input></label>`, a = n?.target, o = n?.service_data, s = String(a?.entity_id ?? o?.entity_id ?? "");
 		return F`<div class="action-block">
       <h4>${this.t(t)}</h4>
       <div class="fields">
         <label class="field"
           ><span>${this.t("Action")}</span
           ><ha-select
-            .value=${r}
-            @selected=${(t) => this.edit((n, r) => {
-			let i = t.target.value;
-			i ? r[e] = { action: i } : delete r[e];
-		})}
-          >
-            ${[
+            .options=${[
 			"",
 			"more-info",
 			"toggle",
@@ -1537,15 +1556,23 @@ var Q = class extends W {
 			"call-service",
 			"assist",
 			"none"
-		].map((e) => F`<ha-list-item value=${e}>${e || this.t("Default / inherit")}</ha-list-item>`)}
-          </ha-select></label
+		].map((e) => ({
+			value: e,
+			label: e || this.t("Default / inherit")
+		}))}
+            .value=${r}
+            @selected=${(t) => this.edit((n, r) => {
+			let i = t.detail.value ?? "";
+			i ? r[e] = { action: i } : delete r[e];
+		})}
+          ></ha-select></label
         >
         ${r === "navigate" ? i("Navigation path", "navigation_path") : L}
         ${r === "url" ? i("URL", "url_path") : L}
         ${r === "perform-action" || r === "call-service" ? F` ${i("Service / action", r === "perform-action" ? "perform_action" : "service")}
                 <label class="field"
                   ><span>${this.t("Target entity ID")}</span
-                  ><ha-textfield
+                  ><ha-input
                     type="text"
                     .value=${s}
                     @change=${(t) => this.edit((n, i) => {
@@ -1558,7 +1585,7 @@ var Q = class extends W {
 				entity_id: o
 			}, i[e] = a;
 		})}
-                  ></ha-textfield></label>` : L}
+                  ></ha-input></label>` : L}
         ${r === "more-info" || r === "toggle" || r === "assist" ? i("Entity ID (optional)", "entity") : L}
         ${r === "navigate" ? F`<label class="field"
                 ><span>${this.t("Replace browser history")}</span
@@ -1597,8 +1624,7 @@ var Q = class extends W {
       </div>
       ${r === "perform-action" || r === "call-service" ? F`<label class="field full"
               ><span>${this.t("Action data (JSON object)")}</span>
-              <ha-textfield
-                multiline
+              <ha-textarea
                 rows="3"
                 .value=${JSON.stringify(n?.data ?? n?.service_data ?? {}, null, 2)}
                 @change=${(t) => {
@@ -1615,7 +1641,7 @@ var Q = class extends W {
 				this.error = this.t("Action data must be a valid JSON object.");
 			}
 		}}
-              ></ha-textfield>
+              ></ha-textarea>
             </label>` : L}
     </div>`;
 	}
@@ -1757,8 +1783,10 @@ var Q = class extends W {
       background: var(--secondary-background-color, #eee);
     }
     button:focus-visible,
-    ha-textfield:focus-visible,
+    ha-input:focus-visible,
     ha-select:focus-visible,
+    ha-icon-picker:focus-visible,
+    ha-textarea:focus-visible,
     ha-switch:focus-visible {
       outline: 2px solid var(--primary-color);
       outline-offset: 2px;
@@ -1816,21 +1844,22 @@ var Q = class extends W {
       font-size: 0.74rem;
       font-weight: 400;
     }
-    ha-textfield,
+    ha-input,
     ha-select {
       display: block;
       width: 100%;
-      --mdc-text-field-fill-color: var(--card-background-color, #fff);
-      --mdc-text-field-idle-line-color: var(--divider-color, #bbb);
-      --mdc-text-field-hover-line-color: var(--primary-color);
-      --mdc-select-fill-color: var(--card-background-color, #fff);
+    }
+    ha-icon-picker,
+    ha-textarea {
+      display: block;
+      width: 100%;
     }
     .color-control {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .color-control ha-textfield[type='color'] {
+    .color-control ha-input[type='color'] {
       width: 44px;
       min-width: 44px;
       height: 40px;
