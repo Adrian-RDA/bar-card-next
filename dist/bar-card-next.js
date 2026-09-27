@@ -1191,7 +1191,12 @@ var Q = class extends G {
 		let i = this.config?.[t];
 		return I`<label class="field"
       ><span>${this.t(e)}</span>
-      ${n === "select" ? I`<ha-select
+      ${n === "checkbox" ? I`<ha-switch
+              .checked=${!!i}
+              @change=${(e) => this.edit((n) => {
+			n[t] = e.target.checked;
+		})}
+            ></ha-switch>` : n === "select" ? I`<ha-select
               .options=${r.map((e) => ({
 			value: e,
 			label: e ? this.t(e) : this.t("Automatic")
@@ -1291,11 +1296,17 @@ var Q = class extends G {
       <p>${this.t("Layout, color, and visible labels.")}</p>
       ${this.selected === -1 ? I`<div class="fields">
               ${this.globalField("Card title", "title")}
-              ${this.globalField("Columns", "columns", "number")}${this.globalField("Stack", "stack", "select", ["", "horizontal"])}
+              ${this.globalField("Columns", "columns", "number")}
+              ${this.globalField("Stack", "stack", "select", ["", "horizontal"])}
+              ${this.globalField("Card radius", "card_radius")}
+              ${this.globalField("Use in an entities card", "entity_row", "checkbox")}
             </div>` : this.entityPicker()}
-      <div class="fields">
+      <div class="fields appearance-fields">
         ${this.field("Name", "name")}${this.iconField()}
-        ${this.colorField()} ${this.field("Shape", "shape", "select", ["theme", "square"])}
+        <div class="field-stack">
+          ${this.colorField()}
+          ${this.field("Shape", "shape", "select", ["theme", "square"])}
+        </div>
         ${this.field("Direction", "direction", "select", [
 			"right",
 			"left",
@@ -1305,8 +1316,6 @@ var Q = class extends G {
         ${this.field("Height", "height", "text", [], "Example: 40px or 180px for vertical bars")}
         ${this.field("Width", "width", "text", [], "Example: 100% or 240px")}
         ${this.field("Bar radius", "border_radius", "text", [], "Example: 12px; empty uses the Home Assistant theme.")}
-        ${this.globalField("Card radius", "card_radius", "text")}
-        ${this.field("Use in an entities card", "entity_row", "checkbox", [], "Removes the card background and outer spacing.")}
         ${this.field("Use entity attributes as options", "entity_config", "checkbox")}
       </div>
       <h4>${this.t("Element positions")}</h4>
@@ -1843,6 +1852,11 @@ var Q = class extends G {
       min-width: 0;
       font-size: 0.86rem;
       font-weight: 600;
+    }
+    .field-stack {
+      display: grid;
+      gap: 22px;
+      min-width: 0;
     }
     .field small {
       font-size: 0.74rem;
